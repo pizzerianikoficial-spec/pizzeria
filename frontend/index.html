@@ -4,8 +4,11 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Sistema de gestión integral para pizzería: Punto de Venta, Cocina KDS y Panel de Administración." />
-    <title>🍕 Sistema Pizzería</title>
+    <meta
+      name="description"
+      content="Sistema de gestión integral para pizzería: Punto de Venta, Cocina KDS y Panel de Administración."
+    />
+    <title>Sistema Pizzería</title>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   </head>
   <body>
@@ -15,44 +18,50 @@
       // Configuración de Toast global
       window.Toast = Swal.mixin({
         toast: true,
-        position: 'top-end',
+        position: "top-end",
         showConfirmButton: false,
         timer: 3000,
         timerProgressBar: true,
         didOpen: (toast) => {
-          toast.addEventListener('mouseenter', Swal.stopTimer)
-          toast.addEventListener('mouseleave', Swal.resumeTimer)
-        }
+          toast.addEventListener("mouseenter", Swal.stopTimer);
+          toast.addEventListener("mouseleave", Swal.resumeTimer);
+        },
       });
 
       // Confirmar una acción con callback
-      window.confirmAction = function(callback, title, text, icon = 'warning', confirmButtonText = 'Confirmar') {
+      window.confirmAction = function (
+        callback,
+        title,
+        text,
+        icon = "warning",
+        confirmButtonText = "Confirmar",
+      ) {
         window.Swal.fire({
           title: title,
           text: text,
           icon: icon,
           showCancelButton: true,
-          confirmButtonColor: '#84cc16', // lime-500
-          cancelButtonColor: '#ef4444', // red-500
+          confirmButtonColor: "#84cc16", // lime-500
+          cancelButtonColor: "#ef4444", // red-500
           confirmButtonText: confirmButtonText,
-          cancelButtonText: 'Cancelar'
+          cancelButtonText: "Cancelar",
         }).then((result) => {
           if (result.isConfirmed) {
-            if (typeof callback === 'function') callback();
+            if (typeof callback === "function") callback();
           }
         });
-      }
+      };
 
       // Confirmar eliminación
-      window.confirmDelete = function(callback) {
+      window.confirmDelete = function (callback) {
         window.confirmAction(
           callback,
-          '¿Estás seguro?',
-          'Esta acción no se puede deshacer.',
-          'warning',
-          'Sí, eliminar'
+          "¿Estás seguro?",
+          "Esta acción no se puede deshacer.",
+          "warning",
+          "Sí, eliminar",
         );
-      }
+      };
     </script>
   </body>
 </html>

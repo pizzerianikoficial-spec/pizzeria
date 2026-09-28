@@ -1,12 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" shape-rendering="geometricPrecision">
-  <circle cx="50" cy="50" r="48" fill="#d98e2b"/>
-  <circle cx="50" cy="50" r="41" fill="#f4cd5a"/>
-  <path d="M50 50 L50 9h.01" opacity="0" />
-  <circle cx="50" cy="9" r="3" fill="#c0392b"/>
-  <circle cx="28" cy="31" r="6.5" fill="#c0392b"/>
-  <circle cx="72" cy="31" r="6.5" fill="#c0392b"/>
-  <circle cx="50" cy="72" r="8" fill="#c0392b"/>
-  <circle cx="34" cy="62" r="5" fill="#4a6741"/>
-  <circle cx="66" cy="62" r="5" fill="#4a6741"/>
-  <circle cx="50" cy="44" r="5" fill="#4a6741"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><text y=".9em" font-size="90">🍕</text></svg>
