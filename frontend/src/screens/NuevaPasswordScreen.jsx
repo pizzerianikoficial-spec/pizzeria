@@ -1,3 +1,4 @@
+import { API_BASE as API_URL } from "../config/api";
 import React, { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 //import { FiLock } from "react-icons/fi";
@@ -7,7 +8,7 @@ import {toast} from "react-hot-toast";
 import logoImg from "../assets/login/logo.png";
 import {Lock, Eye, EyeOff} from "lucide-react";
 
-const API_URL = "http://localhost:3001/api";
+
 
 export default function NuevaPasswordScreen() {
 const navigate = useNavigate();

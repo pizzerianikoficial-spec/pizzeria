@@ -1,3 +1,4 @@
+import { API_BASE } from "../../config/api";
 import { useState, useEffect, useMemo } from "react";
 import axios from "axios";
 import {
@@ -109,7 +110,7 @@ export default function ProductosScreen() {
   useEffect(() => {
     const loadBox = async () => {
       try {
-        const { data } = await axios.get("http://localhost:3001/api/caja", {
+        const { data } = await axios.get(`${API_BASE}/caja`, {
           withCredentials: true,
         });
         if (data.success && data.caja) {
@@ -135,7 +136,7 @@ export default function ProductosScreen() {
     setSavingBox(true);
     try {
       const { data } = await axios.put(
-        "http://localhost:3001/api/caja",
+        `${API_BASE}/caja`,
         { precio_caja: value },
         { withCredentials: true },
       );
@@ -253,13 +254,13 @@ export default function ProductosScreen() {
     try {
       let endpoint = "";
       if (selectedCategory === "pizzas")
-        endpoint = "http://localhost:3001/api/pizzas";
+        endpoint = `${API_BASE}/pizzas`;
       if (selectedCategory === "drinks")
-        endpoint = "http://localhost:3001/api/bebidas";
+        endpoint = `${API_BASE}/bebidas`;
       if (selectedCategory === "icecream")
-        endpoint = "http://localhost:3001/api/heladeria";
+        endpoint = `${API_BASE}/heladeria`;
       if (selectedCategory === "extras")
-        endpoint = "http://localhost:3001/api/extras";
+        endpoint = `${API_BASE}/extras`;
 
       const formData = new FormData();
       formData.append("name", productData.name);
@@ -341,7 +342,7 @@ export default function ProductosScreen() {
   const handleSaveCombo = async (comboData) => {
     setIsSaving(true);
     try {
-      const endpoint = "http://localhost:3001/api/combos";
+      const endpoint = `${API_BASE}/combos`;
 
       const formData = new FormData();
       formData.append("nombre", comboData.nombre);
@@ -429,12 +430,12 @@ export default function ProductosScreen() {
   const handleDelete = async (id, category) => {
     window.confirmDelete(async () => {
       let endpoint = "";
-      if (category === "pizzas") endpoint = "http://localhost:3001/api/pizzas";
-      if (category === "drinks") endpoint = "http://localhost:3001/api/bebidas";
+      if (category === "pizzas") endpoint = `${API_BASE}/pizzas`;
+      if (category === "drinks") endpoint = `${API_BASE}/bebidas`;
       if (category === "icecream")
-        endpoint = "http://localhost:3001/api/heladeria";
-      if (category === "extras") endpoint = "http://localhost:3001/api/extras";
-      if (category === "combos") endpoint = "http://localhost:3001/api/combos";
+        endpoint = `${API_BASE}/heladeria`;
+      if (category === "extras") endpoint = `${API_BASE}/extras`;
+      if (category === "combos") endpoint = `${API_BASE}/combos`;
 
       try {
         await axios.put(

@@ -1,3 +1,4 @@
+import { API_BASE } from "../../config/api";
 import React, { useState, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -332,7 +333,7 @@ export default function OrderEditModal({ pedido = {}, displayNum, onClose }) {
           : null,
       };
 
-      const response = await fetch("http://localhost:3001/api/editar-venta", {
+      const response = await fetch(`${API_BASE}/editar-venta`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",

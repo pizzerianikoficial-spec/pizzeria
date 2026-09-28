@@ -1,8 +1,9 @@
+import { API_BASE } from "../config/api";
 import { useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useApp } from "../context/AppContext";
 
-const API_BASE = "http://localhost:3001/api";
+
 
 export function useExchangeRate() {
   const queryClient = useQueryClient();

@@ -1,3 +1,4 @@
+import { API_BASE } from "../../config/api";
 import { useState, useEffect, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useBranches, useStaff } from "../../hooks/useBranches";
@@ -204,7 +205,7 @@ export default function StaffManagement() {
       let response;
       if (editingId) {
         response = await axios.put(
-          `http://localhost:3001/api/actualizar-usuario/${editingId}`,
+          `${API_BASE}/actualizar-usuario/${editingId}`,
           {
             nombre_completo: form.name,
             email: form.email,
@@ -216,7 +217,7 @@ export default function StaffManagement() {
         );
       } else {
         response = await axios.post(
-          "http://localhost:3001/api/registrar-usuario",
+          `${API_BASE}/registrar-usuario`,
           {
             nombre_completo: form.name,
             email: form.email,
@@ -258,7 +259,7 @@ export default function StaffManagement() {
         setIsDeletingId(id);
         try {
           const response = await axios.put(
-            `http://localhost:3001/api/eliminar-usuario/${id}`,
+            `${API_BASE}/eliminar-usuario/${id}`,
             {},
             { withCredentials: true },
           );
@@ -289,7 +290,7 @@ export default function StaffManagement() {
         setIsDeletingId(id);
         axios
           .put(
-            `http://localhost:3001/api/eliminar-usuario/${id}`,
+            `${API_BASE}/eliminar-usuario/${id}`,
             {},
             { withCredentials: true },
           )
@@ -306,7 +307,7 @@ export default function StaffManagement() {
   const handleActivate = async (id) => {
     try {
       const response = await axios.put(
-        `http://localhost:3001/api/activar-usuario/${id}`,
+        `${API_BASE}/activar-usuario/${id}`,
         {},
         { withCredentials: true },
       );

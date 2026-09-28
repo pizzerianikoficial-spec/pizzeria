@@ -1,3 +1,4 @@
+import { API_BASE } from "../../config/api";
 import { useState, useRef, useEffect } from "react";
 import axios from "axios";
 import { useApp } from "../../context/AppContext";
@@ -46,7 +47,7 @@ export default function DeliveryCustomerModal({
     setIsSearchingCustomer(true);
     try {
       const { data } = await axios.post(
-        "http://localhost:3001/api/buscar-o-registrar-cliente-delivery",
+        `${API_BASE}/buscar-o-registrar-cliente-delivery`,
         { phoneLastDigits: q },
         { withCredentials: true }
       );
@@ -107,7 +108,7 @@ export default function DeliveryCustomerModal({
       if (selectedCustomer?.isDeliveryNew && alias.trim()) {
         try {
           const { data } = await axios.put(
-            `http://localhost:3001/api/clientes/${selectedCustomer.id}/alias`,
+            `${API_BASE}/clientes/${selectedCustomer.id}/alias`,
             { name: alias.trim() },
             { withCredentials: true }
           );
@@ -126,7 +127,7 @@ export default function DeliveryCustomerModal({
       if (selectedCustomer?.isNew) {
         try {
           const { data } = await axios.post(
-            "http://localhost:3001/api/registrar-clientes",
+            `${API_BASE}/registrar-clientes`,
             {
               cedula: selectedCustomer.cedula,
               name: selectedCustomer.name,

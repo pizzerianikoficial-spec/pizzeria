@@ -1,3 +1,4 @@
+import { API_BASE } from "../../config/api";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useApp, isBoxItem } from "../../context/AppContext";
@@ -419,8 +420,8 @@ export default function CheckoutModal({ onClose }) {
     setIsSubmitting(true);
     try {
       const endpoint = isPendingSale
-        ? `http://localhost:3001/api/completar-venta-pendiente/${currentOrder.pendingSaleId}`
-        : "http://localhost:3001/api/procesar-venta";
+        ? `${API_BASE}/completar-venta-pendiente/${currentOrder.pendingSaleId}`
+        : `${API_BASE}/procesar-venta`;
       const requestPayload = isPendingSale
         ? {
             id_usuario: currentUser?.id || 1,

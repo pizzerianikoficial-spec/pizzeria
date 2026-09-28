@@ -1,3 +1,4 @@
+import { API_BASE as API } from "../config/api";
 import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import Swal from "sweetalert2";
@@ -20,7 +21,7 @@ import {
 } from "lucide-react";
 import { exportCierrePDF } from "../utils/pdfCierre";
 
-const API = "http://localhost:3001/api";
+
 
 export default function CierreScreen() {
   const { clearCart, currentUser } = useApp();
@@ -311,6 +312,24 @@ export default function CierreScreen() {
 
       // Enviar el PDF del cierre por correo
       if (pdfBlob && pdfBlob.size > 0) {
+        if (pdfBlob.size > 3.5 * 1024 * 1024) {
+          console.warn(
+            "PDF demasiado grande (" +
+              (pdfBlob.size / 1024 / 1024).toFixed(1) +
+              " MB), se omitió el envío por correo.",
+          );
+          clearCart();
+          queryClient.invalidateQueries({ queryKey: ["kitchenOrders"] });
+          queryClient.invalidateQueries({ queryKey: ["pedidosActivos"] });
+          queryClient.invalidateQueries({ queryKey: ["verificarCierrePendiente"] });
+          await fetchResumenDia();
+          window.Toast.fire({
+            icon: "warning",
+            title:
+              "¡Cierre realizado y PDF descargado! No se envió por correo (el PDF supera el tamaño máximo).",
+          });
+          return;
+        }
         try {
           const base64 = await new Promise((resolve, reject) => {
             const reader = new FileReader();

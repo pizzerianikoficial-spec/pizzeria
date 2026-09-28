@@ -1,3 +1,4 @@
+import { API_BASE } from "../config/api";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { useEffect } from "react";
@@ -14,7 +15,7 @@ export function useContadorCajero() {
     refetchOnMount: false,
     queryFn: async () => {
       const { data } = await axios.get(
-        "http://localhost:3001/api/obtener-contador-cajero",
+        `${API_BASE}/obtener-contador-cajero`,
         { withCredentials: true },
       );
       return data.success ? data.total : 0;

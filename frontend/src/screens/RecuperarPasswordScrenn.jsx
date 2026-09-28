@@ -1,3 +1,4 @@
+import { API_BASE as API_URL } from "../config/api";
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { CloseButton } from "../components/ui/ButtonClose";
@@ -6,7 +7,7 @@ import { toast } from "react-hot-toast";
 import logoImg from "../assets/login/logo.png";
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 
-const API_URL = "http://localhost:3001/api";
+
 
 export default function RecuperarPasswordScreen() {
 const navigate = useNavigate();

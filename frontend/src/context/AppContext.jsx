@@ -1,3 +1,4 @@
+import { API_BASE } from "../config/api";
 import {
   createContext,
   useContext,
@@ -580,7 +581,7 @@ export function AppProvider({ children }) {
     let activo = true;
     const cargarCaja = async () => {
       try {
-        const res = await fetch("http://localhost:3001/api/caja", {
+        const res = await fetch(`${API_BASE}/caja`, {
           credentials: "include",
         });
         if (!res.ok) return;
@@ -644,7 +645,7 @@ export function AppProvider({ children }) {
 
   const login = useCallback(async (email, password) => {
     try {
-      const res = await fetch("http://localhost:3001/api/login", {
+      const res = await fetch(`${API_BASE}/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

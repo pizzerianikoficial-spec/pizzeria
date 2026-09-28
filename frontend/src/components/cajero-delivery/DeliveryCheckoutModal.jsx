@@ -1,3 +1,4 @@
+import { API_BASE } from "../../config/api";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useApp, isBoxItem } from "../../context/AppContext";
@@ -248,7 +249,7 @@ export default function DeliveryCheckoutModal({ onClose }) {
     setIsSubmitting(true);
     try {
       const response = await axios.post(
-        "http://localhost:3001/api/procesar-venta",
+        `${API_BASE}/procesar-venta`,
         payload,
         { withCredentials: true },
       );

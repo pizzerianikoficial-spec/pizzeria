@@ -1,3 +1,4 @@
+import { API_BASE } from "../../config/api";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useBranches } from "../../hooks/useBranches";
@@ -28,7 +29,7 @@ export default function Sucursales() {
       let response;
       if (editingId) {
         response = await axios.put(
-          `http://localhost:3001/api/actualizar-sucursal/${editingId}`,
+          `${API_BASE}/actualizar-sucursal/${editingId}`,
           {
             name: newBranch.name,
             direccion: newBranch.address,
@@ -37,7 +38,7 @@ export default function Sucursales() {
         );
       } else {
         response = await axios.post(
-          "http://localhost:3001/api/registrar-sucursal",
+          `${API_BASE}/registrar-sucursal`,
           {
             name: newBranch.name,
             direccion: newBranch.address,
@@ -116,7 +117,7 @@ export default function Sucursales() {
     setDeletingId(branch.id);
     try {
       const response = await axios.delete(
-        `http://localhost:3001/api/eliminar-sucursal/${branch.id}`,
+        `${API_BASE}/eliminar-sucursal/${branch.id}`,
         { withCredentials: true }
       );
       if (response.data.success) {

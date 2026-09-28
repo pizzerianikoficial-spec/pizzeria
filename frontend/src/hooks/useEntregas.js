@@ -1,3 +1,4 @@
+import { API_BASE } from "../config/api";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { useEffect } from "react";
@@ -16,7 +17,7 @@ export function useEntregas() {
     refetchOnWindowFocus: false,
     refetchOnMount: false,
     queryFn: async () => {
-      const res = await axios.get("http://localhost:3001/api/entregas", {
+      const res = await axios.get(`${API_BASE}/entregas`, {
         withCredentials: true,
       });
 

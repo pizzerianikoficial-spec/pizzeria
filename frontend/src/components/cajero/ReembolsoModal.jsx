@@ -1,3 +1,4 @@
+import { API_BASE } from "../../config/api";
 import React from "react";
 import { X, User, Package, Undo2, DollarSign, AlertCircle } from "lucide-react";
 import { useExchangeRate } from "../../hooks/useExchangeRate";
@@ -12,7 +13,7 @@ export default function ReembolsoModal({ pedido = {}, displayNum, onClose }) {
   const handleConfirmarReembolso = async () => {
     setIsProcessing(true);
     try {
-      const res = await fetch("http://localhost:3001/api/reembolsar-venta", {
+      const res = await fetch(`${API_BASE}/reembolsar-venta`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         credentials: "include",

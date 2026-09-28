@@ -1,3 +1,4 @@
+import { API_BASE } from "../../config/api";
 import { useApp } from "../../context/AppContext";
 import { useBranches } from "../../hooks/useBranches";
 import {
@@ -132,7 +133,7 @@ export default function Sidebar({ module, activeView, onNavigate }) {
   const handleLogout = async () => {
     try {
       await axios.post(
-        "http://localhost:3001/api/logout",
+        `${API_BASE}/logout`,
         {},
         { withCredentials: true },
       );

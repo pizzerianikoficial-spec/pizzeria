@@ -1,7 +1,8 @@
+import { API_BASE as API } from "../config/api";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 
-const API = "http://localhost:3001/api";
+
 
 export function useVerificarCierre() {
   return useQuery({

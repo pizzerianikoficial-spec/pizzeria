@@ -1,3 +1,4 @@
+import { API_BASE } from "../../config/api";
 import { useState, useEffect, useMemo } from "react";
 import axios from "axios";
 import {
@@ -22,7 +23,7 @@ import {
 import { exportCierrePDF } from "../../utils/pdfCierre";
 import Pagination from "../ui/Pagination";
 
-const API_BASE = "http://localhost:3001/api";
+
 
 const formatMoney = (value) => `$${Number(value || 0).toFixed(2)}`;
 

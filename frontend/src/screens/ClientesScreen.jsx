@@ -1,3 +1,4 @@
+import { API_BASE } from "../config/api";
 import { useState, useEffect, useMemo } from "react";
 import axios from "axios";
 import {
@@ -16,7 +17,7 @@ import {
 import ClienteForm from "../components/admin/clientes/ClienteForm";
 import Pagination from "../components/ui/Pagination";
 
-const API_BASE = "http://localhost:3001/api";
+
 
 const PAGE_SIZE = 10;
 

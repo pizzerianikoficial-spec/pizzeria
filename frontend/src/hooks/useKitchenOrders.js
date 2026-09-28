@@ -1,9 +1,10 @@
+import { API_BASE } from "../config/api";
 import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useApp } from "../context/AppContext";
 import { subscribeToPusher } from "../lib/pusherClient";
 
-const API_BASE = "http://localhost:3001/api";
+
 
 const kitchenQueryClients = new Map();
 let stopKitchenSubscriptions = null;

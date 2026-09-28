@@ -1,3 +1,4 @@
+import { API_BASE } from "../../config/api";
 import { useState, useRef, useEffect } from "react";
 import axios from "axios"; // <-- Importación de axios agregada
 import { useApp } from "../../context/AppContext";
@@ -233,7 +234,7 @@ export default function OrderTypeModal({ onConfirm, onClose, pendingProduct }) {
     setIsSearchingDelivery(true);
     try {
       const { data } = await axios.get(
-        `http://localhost:3001/api/buscar-delivery?q=${digits}`,
+        `${API_BASE}/buscar-delivery?q=${digits}`,
       );
 
       setDeliveryLookupDone(true);
@@ -266,7 +267,7 @@ export default function OrderTypeModal({ onConfirm, onClose, pendingProduct }) {
     try {
       if (selectedType === "delivery" || selectedType === "pickup") {
         const { data } = await axios.post(
-          "http://localhost:3001/api/buscar-o-registrar-cliente-delivery",
+          `${API_BASE}/buscar-o-registrar-cliente-delivery`,
           { phoneLastDigits: q },
           { withCredentials: true },
         );
@@ -282,7 +283,7 @@ export default function OrderTypeModal({ onConfirm, onClose, pendingProduct }) {
       }
 
       const { data } = await axios.get(
-        `http://localhost:3001/api/buscar-clientes?q=${encodeURIComponent(q)}`,
+        `${API_BASE}/buscar-clientes?q=${encodeURIComponent(q)}`,
       );
 
       if (data.success && data.cliente) {
@@ -394,7 +395,7 @@ export default function OrderTypeModal({ onConfirm, onClose, pendingProduct }) {
     const paymentAmountBs = advanceUSD * (exchangeRate || 0);
 
     const response = await axios.post(
-      "http://localhost:3001/api/registrar-pedido-pendiente",
+      `${API_BASE}/registrar-pedido-pendiente`,
       {
         id_cliente: finalCustomer?.id ?? finalCustomer?.id_cliente ?? 1,
         id_usuario: currentUser?.id || 1,
@@ -455,7 +456,7 @@ export default function OrderTypeModal({ onConfirm, onClose, pendingProduct }) {
     if (needsDeliveryDigits && deliveryDigits.trim() && !foundDelivery) {
       try {
         const { data: dataDelivery } = await axios.post(
-          "http://localhost:3001/api/registrar-delivery",
+          `${API_BASE}/registrar-delivery`,
           {
             name: deliveryAlias.trim() || `Delivery-${deliveryDigits.trim()}`,
             phone: deliveryDigits.trim(),
@@ -480,7 +481,7 @@ export default function OrderTypeModal({ onConfirm, onClose, pendingProduct }) {
     if (selectedCustomer?.isDeliveryNew && alias.trim()) {
       try {
         const { data } = await axios.put(
-          `http://localhost:3001/api/clientes/${selectedCustomer.id}/alias`,
+          `${API_BASE}/clientes/${selectedCustomer.id}/alias`,
           { name: alias.trim() },
         );
 
@@ -500,7 +501,7 @@ export default function OrderTypeModal({ onConfirm, onClose, pendingProduct }) {
     if (selectedCustomer?.isNew) {
       try {
         const { data } = await axios.post(
-          "http://localhost:3001/api/registrar-clientes",
+          `${API_BASE}/registrar-clientes`,
           {
             cedula: selectedCustomer.cedula,
             name: selectedCustomer.name,

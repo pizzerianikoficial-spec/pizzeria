@@ -1,11 +1,12 @@
+import { API_BASE } from "../config/api";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import { useApp } from "../context/AppContext";
 
-const API_BASE = "http://localhost:3001/api";
+
 
 const api = axios.create({
-  baseURL: "http://localhost:3001/api",
+  baseURL: `${API_BASE}`,
   withCredentials: true,
 });
 

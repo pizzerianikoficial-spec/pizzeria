@@ -1,6 +1,6 @@
 import Pusher from "pusher-js";
 
-const apiBase = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
+const apiBase = import.meta.env.VITE_API_URL || "/api";
 const key = import.meta.env.VITE_PUSHER_KEY;
 const cluster = import.meta.env.VITE_PUSHER_CLUSTER || "mt1";
 

@@ -1,3 +1,4 @@
+import { API_BASE } from "../../config/api";
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import axios from "axios";
@@ -27,7 +28,7 @@ function ExtrasModal({ item, onClose, onSave }) {
   useEffect(() => {
     const fetchExtras = async () => {
       try {
-        const response = await axios.get("http://localhost:3001/api/extras", {
+        const response = await axios.get(`${API_BASE}/extras`, {
           withCredentials: true,
         });
         const data = response.data;

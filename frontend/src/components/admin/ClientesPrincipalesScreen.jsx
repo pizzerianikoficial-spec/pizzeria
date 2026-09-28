@@ -1,3 +1,4 @@
+import { API_BASE } from "../../config/api";
 import { useState, useEffect, useMemo } from "react";
 import axios from "axios";
 import {
@@ -29,7 +30,7 @@ import {
   CartesianGrid,
 } from "recharts";
 
-const API_BASE = "http://localhost:3001/api";
+
 
 const VIP_LIMIT = 10;
 

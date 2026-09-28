@@ -1,10 +1,11 @@
+import { API_BASE } from "../../config/api";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { X, Plus, Pencil, Trash2, Save, XCircle } from "lucide-react";
 import axios from "axios";
 import { useProducts } from "../../hooks/useProducts";
 
-const API_BASE = "http://localhost:3001/api";
+
 
 const CATEGORIES_MAP = {
   pizzas: { label: "Pizzas", icon: "🍕" },

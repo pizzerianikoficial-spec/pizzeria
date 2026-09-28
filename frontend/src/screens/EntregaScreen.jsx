@@ -1,3 +1,4 @@
+import { API_BASE } from "../config/api";
 import { useState, useEffect } from "react";
 import axios from "axios";
 import { useQueryClient } from "@tanstack/react-query";
@@ -325,7 +326,7 @@ export default function EntregaScreen() {
   const handleConfirm = async (id) => {
     try {
       await axios.put(
-        `http://localhost:3001/api/entregas/${id}/completar`,
+        `${API_BASE}/entregas/${id}/completar`,
         {},
         {
           withCredentials: true,

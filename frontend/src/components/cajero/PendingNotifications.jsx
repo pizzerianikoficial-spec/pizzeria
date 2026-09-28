@@ -1,3 +1,4 @@
+import { API_BASE as API_URL } from "../../config/api";
 import { useEffect, useState } from "react";
 import axios from "axios";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -6,7 +7,7 @@ import { Bell, ChevronRight, Loader2, X } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { useExchangeRate } from "../../hooks/useExchangeRate";
 
-const API_URL = "http://localhost:3001/api"; // Recuerda usar variables de entorno para Vercel
+
 
 const CATEGORY_TO_SIZE = {
   1: "Normal",

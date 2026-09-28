@@ -1,3 +1,4 @@
+import { API_BASE } from "../../config/api";
 import { useEffect, useState, useRef } from "react";
 import axios from "axios";
 import {
@@ -8,7 +9,7 @@ import {
 } from "lucide-react";
 import { useExchangeRate } from "../../hooks/useExchangeRate";
 
-const API_BASE = "http://localhost:3001/api";
+
 
 const getHeaderDate = () => {
   const date = new Date();

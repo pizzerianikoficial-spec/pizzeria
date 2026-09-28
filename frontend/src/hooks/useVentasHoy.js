@@ -1,6 +1,7 @@
+import { API_BASE } from "../config/api";
 import { useQuery } from "@tanstack/react-query";
 
-const API_BASE = "http://localhost:3001/api";
+
 
 export function useVentasHoy(filters = {}) {
   const { despacho, id_usuario } = filters;
