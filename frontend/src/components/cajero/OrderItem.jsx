@@ -146,7 +146,7 @@ function ExtrasModal({ item, onClose, onSave }) {
         </div>
       </div>
     </div>,
-    document.body,
+    document.getElementById("app-portals") || document.body,
   );
 }
 
