@@ -11,6 +11,7 @@ import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useApp, AppProvider } from "./context/AppContext";
 import { subscribeToPusher } from "./lib/pusherClient";
+import ErrorBoundary from "./components/ErrorBoundary";
 import NuevaOrdenScreen from "./screens/NuevaOrdenScreen";
 import ColaTrabajoScreen from "./screens/ColaTrabajoScreen";
 import ClientesScreen from "./screens/ClientesScreen";
@@ -130,94 +131,104 @@ function AuthenticatedLayout() {
   );
 }
 
+function RoutedApp() {
+  const location = useLocation();
+
+  return (
+    <ErrorBoundary key={location.pathname}>
+      <Routes>
+        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route path="/login" element={<LoginRoute />} />
+        <Route path="/nueva-password" element={<NuevaPasswordScreen />} />
+        <Route
+          path="/recuperar-password"
+          element={<RecuperarPasswordScreen />}
+        />
+
+        <Route element={<ProtectedRoute roles={["admin"]} />}>
+          <Route element={<AuthenticatedLayout />}>
+            <Route
+              path="/dashboard"
+              element={<AdminScreen activeView="dashboard" />}
+            />
+            <Route
+              path="/reportes"
+              element={<AdminScreen activeView="reportes" />}
+            />
+            <Route
+              path="/sucursales"
+              element={<AdminScreen activeView="sucursales" />}
+            />
+            <Route
+              path="/personal"
+              element={<AdminScreen activeView="personal" />}
+            />
+            <Route path="/clientes" element={<ClientesScreen />} />
+            <Route
+              path="/clientes-top"
+              element={<AdminScreen activeView="clientes-top" />}
+            />
+            <Route
+              path="/productos"
+              element={<AdminScreen activeView="productos" />}
+            />
+            <Route
+              path="/cierres"
+              element={<AdminScreen activeView="cierres" />}
+            />
+            <Route path="/tasa" element={<AdminScreen activeView="tasa" />} />
+          </Route>
+        </Route>
+
+        <Route element={<ProtectedRoute roles={["cashier"]} />}>
+          <Route element={<AuthenticatedLayout />}>
+            <Route path="/nueva-orden" element={<NuevaOrdenScreen />} />
+            <Route path="/cola-trabajos" element={<ColaTrabajoScreen />} />
+            <Route path="/cierre" element={<CierreScreen />} />
+          </Route>
+        </Route>
+
+        <Route element={<ProtectedRoute roles={["cashierdelivery", "caja delivery"]} />}>
+          <Route element={<AuthenticatedLayout />}>
+            <Route path="/caja-delivery" element={<DeliveryNuevaOrdenScreen />} />
+            <Route path="/delivery-cola" element={<DeliveryColaTrabajoScreen />} />
+            <Route path="/cierre-delivery" element={<CierreScreen />} />
+          </Route>
+        </Route>
+
+        <Route element={<ProtectedRoute roles={["cashier", "cashierdelivery", "caja delivery", "admin"]} />}>
+          <Route element={<AuthenticatedLayout />}>
+            <Route path="/entrega" element={<EntregaScreen />} />
+          </Route>
+        </Route>
+
+        <Route element={<ProtectedRoute roles={["chef"]} />}>
+          <Route element={<AuthenticatedLayout />}>
+            <Route path="/cocina" element={<CocineroScreen />} />
+          </Route>
+        </Route>
+        <Route element={<ProtectedRoute roles={["despachador"]} />}>
+          <Route element={<AuthenticatedLayout />}>
+            <Route path="/despacho" element={<DespachoScreen />} />
+          </Route>
+        </Route>
+        <Route element={<ProtectedRoute roles={["mesero", "waiter"]} />}>
+          <Route element={<AuthenticatedLayout />}>
+            <Route path="/mesero" element={<MeseroScreen />} />
+          </Route>
+        </Route>
+
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </ErrorBoundary>
+  );
+}
+
 export default function App() {
   return (
     <AppProvider>
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Navigate to="/login" replace />} />
-          <Route path="/login" element={<LoginRoute />} />
-          <Route path="/nueva-password" element={<NuevaPasswordScreen />} />
-          <Route
-            path="/recuperar-password"
-            element={<RecuperarPasswordScreen />}
-          />
-
-          <Route element={<ProtectedRoute roles={["admin"]} />}>
-            <Route element={<AuthenticatedLayout />}>
-              <Route
-                path="/dashboard"
-                element={<AdminScreen activeView="dashboard" />}
-              />
-              <Route
-                path="/reportes"
-                element={<AdminScreen activeView="reportes" />}
-              />
-              <Route
-                path="/sucursales"
-                element={<AdminScreen activeView="sucursales" />}
-              />
-              <Route
-                path="/personal"
-                element={<AdminScreen activeView="personal" />}
-              />
-              <Route path="/clientes" element={<ClientesScreen />} />
-              <Route
-                path="/clientes-top"
-                element={<AdminScreen activeView="clientes-top" />}
-              />
-              <Route
-                path="/productos"
-                element={<AdminScreen activeView="productos" />}
-              />
-              <Route
-                path="/cierres"
-                element={<AdminScreen activeView="cierres" />}
-              />
-              <Route path="/tasa" element={<AdminScreen activeView="tasa" />} />
-            </Route>
-          </Route>
-
-          <Route element={<ProtectedRoute roles={["cashier"]} />}>
-            <Route element={<AuthenticatedLayout />}>
-              <Route path="/nueva-orden" element={<NuevaOrdenScreen />} />
-              <Route path="/cola-trabajos" element={<ColaTrabajoScreen />} />
-              <Route path="/cierre" element={<CierreScreen />} />
-            </Route>
-          </Route>
-
-          <Route element={<ProtectedRoute roles={["cashierdelivery", "caja delivery"]} />}>
-            <Route element={<AuthenticatedLayout />}>
-              <Route path="/caja-delivery" element={<DeliveryNuevaOrdenScreen />} />
-              <Route path="/delivery-cola" element={<DeliveryColaTrabajoScreen />} />
-              <Route path="/cierre-delivery" element={<CierreScreen />} />
-            </Route>
-          </Route>
-
-          <Route element={<ProtectedRoute roles={["cashier", "cashierdelivery", "caja delivery", "admin"]} />}>
-            <Route element={<AuthenticatedLayout />}>
-              <Route path="/entrega" element={<EntregaScreen />} />
-            </Route>
-          </Route>
-
-          <Route element={<ProtectedRoute roles={["chef"]} />}>
-            <Route element={<AuthenticatedLayout />}>
-              <Route path="/cocina" element={<CocineroScreen />} />
-            </Route>
-          </Route>
-          <Route element={<ProtectedRoute roles={["despachador"]} />}>
-            <Route element={<AuthenticatedLayout />}>
-              <Route path="/despacho" element={<DespachoScreen />} />
-            </Route>
-          </Route>
-          <Route element={<ProtectedRoute roles={["mesero", "waiter"]} />}>
-            <Route element={<AuthenticatedLayout />}>
-              <Route path="/mesero" element={<MeseroScreen />} />
-            </Route>
-          </Route>
-
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+        <RoutedApp />
       </BrowserRouter>
 
       <Toaster
