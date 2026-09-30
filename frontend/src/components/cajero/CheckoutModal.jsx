@@ -511,7 +511,7 @@ export default function CheckoutModal({ onClose }) {
   return (
     <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 animate-fade-in">
       <div
-        className="bg-white rounded-xl sm:rounded-2xl w-full max-w-md max-h-[92vh] overflow-y-auto shadow-2xl"
+        className="bg-white rounded-xl sm:rounded-2xl w-full max-w-md max-h-[92vh] max-h-[92dvh] overflow-y-auto shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}

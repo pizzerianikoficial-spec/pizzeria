@@ -98,7 +98,7 @@ export default function NuevaOrdenScreen() {
       />
 
       {/* Bottom Sheet del Ticket */}
-      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 z-30 flex flex-col w-full sm:w-[520px] max-w-[calc(100%-1rem)] sm:max-w-[calc(100%-2rem)]">
+      <div className="absolute bottom-0 left-1/2 -translate-x-1/2 z-30 flex flex-col w-full sm:w-[520px] max-w-[calc(100%-1rem)] sm:max-w-[calc(100%-2rem)] pb-[env(safe-area-inset-bottom)]">
         {/* Encabezado siempre visible */}
         <div
           onClick={() => setIsTicketOpen(!isTicketOpen)}
@@ -145,10 +145,10 @@ export default function NuevaOrdenScreen() {
         {/* Panel desplegable */}
         <div
           className={`bg-white rounded-b-xl border-x border-b border-slate-100 overflow-hidden transition-all duration-300 ease-in-out flex flex-col ${
-            isTicketOpen ? "max-h-[60vh]" : "max-h-0 border-b-0"
+            isTicketOpen ? "max-h-[60vh] max-h-[60dvh]" : "max-h-0 border-b-0"
           }`}
         >
-          <div className="flex flex-col flex-1 min-h-0 max-h-[60vh] overflow-hidden bg-slate-50">
+          <div className="flex flex-col flex-1 min-h-0 max-h-[60vh] max-h-[60dvh] overflow-hidden bg-slate-50">
             <OrderTicket onCheckout={() => setShowCheckout(true)} />
           </div>
         </div>
