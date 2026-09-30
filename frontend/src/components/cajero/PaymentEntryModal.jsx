@@ -54,16 +54,13 @@ export default function PaymentEntryModal({
 
   const amountUSD = parseToUSD(amountInput);
   // Tolerancia de ~1 céntimo por redondeos Bs <-> USD
-  const maxAllowedUSD =
-    remainingUSD == null ? null : remainingUSD + 0.011;
+  const maxAllowedUSD = remainingUSD == null ? null : remainingUSD + 0.011;
   const isValid =
     !isNaN(amountUSD) &&
     amountUSD > 0 &&
     (maxAllowedUSD == null || amountUSD <= maxAllowedUSD);
   const exceedsMax =
-    maxAllowedUSD != null &&
-    !isNaN(amountUSD) &&
-    amountUSD > maxAllowedUSD;
+    maxAllowedUSD != null && !isNaN(amountUSD) && amountUSD > maxAllowedUSD;
 
   // Equivalencia en tiempo real para la otra moneda
   const equivalent =
@@ -78,9 +75,17 @@ export default function PaymentEntryModal({
       setError("Monto inválido o excede el saldo restante");
       return;
     }
-    // Clamp: nunca añadir más de lo que queda por pagar en USD
-    const finalAmount =
-      remainingUSD == null ? amountUSD : Math.min(amountUSD, remainingUSD);
+    let finalAmount = amountUSD;
+    if (remainingUSD != null) {
+      if (
+        amountUSD >= remainingUSD - 0.02 &&
+        amountUSD <= remainingUSD + 0.011
+      ) {
+        finalAmount = remainingUSD;
+      } else {
+        finalAmount = Math.min(amountUSD, remainingUSD);
+      }
+    }
     onAdd(finalAmount);
   };
 
