@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useApp } from "../context/AppContext";
 import { subscribeToPusher } from "../lib/pusherClient";
+import { usePusherConnection } from "./usePusherConnection";
 
 
 
@@ -177,6 +178,7 @@ const fetchKitchen = async (endpoint, status) => {
 export function useKitchenOrders() {
   const queryClient = useQueryClient();
   const { currentUser } = useApp();
+  const pusherConnected = usePusherConnection();
 
   useEffect(() => {
     if (!currentUser) return undefined;
@@ -189,6 +191,9 @@ export function useKitchenOrders() {
   const query = useQuery({
     queryKey: ["kitchenOrders"],
     staleTime: 15_000,
+    // Polling SOLO cuando Pusher está caído. Con Pusher activo no se hace
+    // ningún refetch para no consumir la cuota gratuita de Vercel/Turso.
+    refetchInterval: pusherConnected ? false : 8000,
     enabled: !!currentUser,
     queryFn: async () => {
       const [pending, preparing, delivered, ready, waiter_pending] =
@@ -231,10 +236,28 @@ export function useKitchenOrders() {
       }
       return { id, status };
     },
-    onSuccess: ({ id, status }) => {
+    // Optimistic update: la card se mueve de columna al instante,
+    // sin esperar la respuesta del servidor ni a Pusher.
+    onMutate: async ({ id, status }) => {
+      await queryClient.cancelQueries({ queryKey: ["kitchenOrders"] });
+      const previousOrders = queryClient.getQueryData(["kitchenOrders"]);
       queryClient.setQueryData(["kitchenOrders"], (old = []) =>
         old.map((o) => (o.id === id ? { ...o, status } : o)),
       );
+      return { previousOrders };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.previousOrders) {
+        queryClient.setQueryData(["kitchenOrders"], context.previousOrders);
+      }
+    },
+    onSettled: () => {
+      // Reconciliación con el servidor para los casos especiales
+      // (Despacho genera también waiter_pending en Local, etc.)
+      queryClient.invalidateQueries({
+        queryKey: ["kitchenOrders"],
+        refetchType: "active",
+      });
     },
   });
 

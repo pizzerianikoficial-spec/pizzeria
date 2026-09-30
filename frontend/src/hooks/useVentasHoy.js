@@ -1,10 +1,12 @@
 import { API_BASE } from "../config/api";
 import { useQuery } from "@tanstack/react-query";
+import { usePusherConnection } from "./usePusherConnection";
 
 
 
 export function useVentasHoy(filters = {}) {
   const { despacho, id_usuario } = filters;
+  const pusherConnected = usePusherConnection();
   const params = new URLSearchParams();
   if (despacho) params.append("despacho", despacho);
   if (id_usuario) params.append("id_usuario", id_usuario);
@@ -13,6 +15,7 @@ export function useVentasHoy(filters = {}) {
   return useQuery({
     queryKey: ["ventasHoy", despacho || "all", id_usuario || "all"],
     staleTime: 30_000,
+    refetchInterval: pusherConnected ? false : 15_000,
     queryFn: async () => {
       try {
         const res = await fetch(

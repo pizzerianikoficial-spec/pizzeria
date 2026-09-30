@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { subscribeToPusher } from "../../lib/pusherClient";
+import { usePusherConnection } from "../../hooks/usePusherConnection";
 import { Bell, ChevronRight, Loader2, X } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { useExchangeRate } from "../../hooks/useExchangeRate";
@@ -19,6 +20,7 @@ export default function PendingNotifications() {
   const queryClient = useQueryClient();
   const { loadPendingOrder, currentOrder } = useApp();
   const { exchangeRate } = useExchangeRate();
+  const pusherConnected = usePusherConnection();
 
   const [open, setOpen] = useState(false);
   const [loadingId, setLoadingId] = useState(null);
@@ -52,6 +54,8 @@ export default function PendingNotifications() {
     },
     staleTime: 15_000,
     refetchOnWindowFocus: false,
+    // Polling SOLO cuando Pusher está caído: con Pusher activo no se refetcha.
+    refetchInterval: pusherConnected ? false : 15_000,
   });
 
   const loadNotification = async (notification) => {

@@ -56,6 +56,38 @@ export const pusherClient = key
     })
   : null;
 
+// ── Estado de conexión de Pusher ─────────────────────────────────────────────
+// Permite que TanStack Query active el polling SOLO cuando Pusher no está
+// disponible. Con Pusher conectado el polling queda desactivado, por lo que
+// el plan gratuito de Vercel/Turso no se consume con refetchs innecesarios.
+const connectionListeners = new Set();
+let pusherConnected = false;
+
+const notifyConnection = (connected) => {
+  if (pusherConnected === connected) return;
+  pusherConnected = connected;
+  connectionListeners.forEach((listener) => listener(connected));
+};
+
+export const isPusherConnected = () => pusherConnected;
+
+export const subscribePusherConnection = (listener) => {
+  connectionListeners.add(listener);
+  listener(pusherConnected);
+  return () => connectionListeners.delete(listener);
+};
+
+if (pusherClient) {
+  const connection = pusherClient.connection;
+  const onConnectionState = () => {
+    notifyConnection(connection.state === "connected");
+  };
+  ["connecting", "connected", "unavailable", "failed", "disconnected"].forEach(
+    (eventName) => connection.bind(eventName, onConnectionState),
+  );
+  onConnectionState();
+}
+
 export const subscribeToPusher = ({ channelName, events }) => {
   if (!pusherClient || !channelName) {
     return () => {};

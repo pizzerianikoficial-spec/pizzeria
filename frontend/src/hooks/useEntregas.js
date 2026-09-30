@@ -4,16 +4,20 @@ import axios from "axios";
 import { useEffect } from "react";
 import { subscribeToPusher } from "../lib/pusherClient";
 import { useApp } from "../context/AppContext";
+import { usePusherConnection } from "./usePusherConnection";
 
 export function useEntregas() {
   const queryClient = useQueryClient();
   const { currentUser } = useApp();
+  const pusherConnected = usePusherConnection();
   // El rol "cashierdelivery" (cajero-delivery) solo muestra pedidos de Delivery
   const soloDelivery = currentUser?.role === "cashierdelivery";
 
   const query = useQuery({
     queryKey: ["entregas"],
     staleTime: 5000,
+    // Polling SOLO cuando Pusher está caído: con Pusher activo no se refetcha.
+    refetchInterval: pusherConnected ? false : 8000,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
     queryFn: async () => {
