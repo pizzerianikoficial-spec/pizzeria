@@ -6,6 +6,7 @@ import {
   Banknote,
   CreditCard,
   Coins,
+  Wallet,
   CheckCircle2,
   ChevronRight,
   AlertCircle,
@@ -35,6 +36,14 @@ const PAYMENT_METHODS = [
     icon: CreditCard,
     color: "text-purple-400",
     bg: "bg-purple-400/10 border-purple-400/30 hover:border-purple-400",
+    reqRef: false,
+  },
+  {
+    id: "cashea",
+    label: "Cashea",
+    icon: Wallet,
+    color: "text-pink-400",
+    bg: "bg-pink-400/10 border-pink-400/30 hover:border-pink-400",
     reqRef: false,
   },
   {
@@ -278,9 +287,11 @@ export default function ProcesarPagoModal({
                             ? "Punto de venta"
                             : method.id === "cash"
                               ? "Pago en efectivo"
-                              : method.id === "binance"
-                                ? "Binance / Zelle"
-                                : "Pago móvil rápido"}
+                              : method.id === "cashea"
+                                ? "Cashea - crédito digital"
+                                : method.id === "binance"
+                                  ? "Binance / Zelle"
+                                  : "Pago móvil rápido"}
                         </p>
                       </div>
                       <ChevronRight className="w-4 h-4 text-slate-400" />

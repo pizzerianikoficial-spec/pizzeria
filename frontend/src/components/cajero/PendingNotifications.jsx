@@ -113,7 +113,9 @@ export default function PendingNotifications() {
               ? "cash"
               : /binance|zelle/i.test(payment.metodo || "")
                 ? "binance"
-                : "pos",
+                : /cashea/i.test(payment.metodo || "")
+                  ? "cashea"
+                  : "pos",
         label: payment.metodo,
         amount:
           payment.monto_usd > 0

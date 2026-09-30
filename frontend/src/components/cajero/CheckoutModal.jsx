@@ -9,6 +9,7 @@ import {
   Banknote,
   CreditCard,
   Coins,
+  Wallet,
   CheckCircle2,
   ChevronRight,
   AlertCircle,
@@ -38,6 +39,13 @@ const PAYMENT_METHODS = [
     icon: CreditCard,
     color: "text-purple-500",
     bg: "bg-purple-50 border-purple-200 hover:border-purple-400",
+  },
+  {
+    id: "cashea",
+    label: "Cashea",
+    icon: Wallet,
+    color: "text-pink-500",
+    bg: "bg-pink-50 border-pink-200 hover:border-pink-400",
   },
   {
     id: "binance",
@@ -106,11 +114,13 @@ export default function CheckoutModal({ onClose }) {
                 ? "Pago Móvil (abono)"
                 : ctxAdvancePaymentMethod === "cash"
                   ? "Efectivo (abono)"
-                  : ctxAdvancePaymentMethod === "pos"
-                    ? "Punto de Venta (abono)"
-                    : ctxAdvancePaymentMethod === "binance"
-                      ? "Binance/Zelle (abono)"
-                      : "Abono previo",
+: ctxAdvancePaymentMethod === "pos"
+                      ? "Punto de Venta (abono)"
+                      : ctxAdvancePaymentMethod === "cashea"
+                        ? "Cashea (abono)"
+                        : ctxAdvancePaymentMethod === "binance"
+                          ? "Binance/Zelle (abono)"
+                          : "Abono previo",
             amount: ctxAdvanceAmount,
             currency: ctxAdvanceCurrency,
           },
@@ -202,6 +212,8 @@ export default function CheckoutModal({ onClose }) {
         return "Efectivo";
       case "mobile":
         return "Pago_Movil";
+      case "cashea":
+        return "Cashea";
       case "binance":
         return "Binance/Zelle";
       case "advance":

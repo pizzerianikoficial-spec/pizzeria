@@ -317,6 +317,12 @@ export const exportCierrePDF = async (cierre) => {
         fmtMoneyUSD(cierre.monto_binance_usd),
         fmtMoneyUSD(cierre.monto_binance_usd),
       ],
+      [
+        "Cashea (USD)",
+        "USD ($)",
+        fmtMoneyUSD(cierre.monto_cashea_usd),
+        fmtMoneyUSD(cierre.monto_cashea_usd),
+      ],
     ],
     headStyles: {
       fillColor: ACCENT,

@@ -15,6 +15,7 @@ import {
   CreditCard,
   Smartphone,
   Coins,
+  Wallet,
   ShoppingBag,
   RefreshCw,
   Undo2,
@@ -48,7 +49,7 @@ export default function CierreScreen() {
   const [walletActiveIndex, setWalletActiveIndex] = useState(0);
   const WALLET_CARD_WIDTH = 280; // ancho fijo de cada tarjeta (px)
   const WALLET_CARD_GAP = 20; // debe coincidir con el gap del track (gap-5 = 20px)
-  const WALLET_CARDS_COUNT = 5; // cantidad de métodos de pago (tarjetas únicas)
+  const WALLET_CARDS_COUNT = 6; // cantidad de métodos de pago (tarjetas únicas)
   // El autoscroll se pausa si el usuario está encima (hover) o arrastrando (mouse/touch)
   const isWalletPaused = isWalletHovering || isWalletDragging;
 
@@ -268,6 +269,7 @@ export default function CierreScreen() {
           monto_punto_bs: Number(desglose_pagos.punto_de_venta_bs || 0),
           monto_pago_movil_bs: Number(desglose_pagos.transferencia_bs || 0),
           monto_binance_usd: Number(desglose_pagos.binance_usd || 0),
+          monto_cashea_usd: Number(desglose_pagos.cashea_usd || 0),
           total_usdt: Number(total_divisa || 0),
           num_ordenes: Number(total_ordenes || 0),
           tipo_cierre: esCierreDelivery ? "delivery" : "general",
@@ -298,6 +300,7 @@ export default function CierreScreen() {
           monto_punto_bs: Number(desglose_pagos.punto_de_venta_bs || 0),
           monto_pago_movil_bs: Number(desglose_pagos.transferencia_bs || 0),
           monto_binance_usd: Number(desglose_pagos.binance_usd || 0),
+          monto_cashea_usd: Number(desglose_pagos.cashea_usd || 0),
           total_usdt: Number(total_divisa || 0),
           num_ordenes: Number(total_ordenes || 0),
           tasa_cambio: Number(tasa || 1),
@@ -447,7 +450,9 @@ export default function CierreScreen() {
   const pvUSD = tasa > 0 ? desglose_pagos.punto_de_venta_bs / tasa : 0;
   const trUSD = tasa > 0 ? desglose_pagos.transferencia_bs / tasa : 0;
   const bnUSD = Number(desglose_pagos.binance_usd || 0);
-  const totalMetodosUSD = desglose_pagos.efectivo_usd + pvUSD + trUSD + bnUSD;
+  const csUSD = Number(desglose_pagos.cashea_usd || 0);
+  const totalMetodosUSD =
+    desglose_pagos.efectivo_usd + pvUSD + trUSD + bnUSD + csUSD;
   const pctEfectivo =
     totalMetodosUSD > 0
       ? Math.round((desglose_pagos.efectivo_usd / totalMetodosUSD) * 100)
@@ -458,6 +463,8 @@ export default function CierreScreen() {
     totalMetodosUSD > 0 ? Math.round((trUSD / totalMetodosUSD) * 100) : 0;
   const pctBinance =
     totalMetodosUSD > 0 ? Math.round((bnUSD / totalMetodosUSD) * 100) : 0;
+  const pctCashea =
+    totalMetodosUSD > 0 ? Math.round((csUSD / totalMetodosUSD) * 100) : 0;
 
   // Donut SVG
   const R = 40;
@@ -466,9 +473,11 @@ export default function CierreScreen() {
   const dashTarjeta = (pctTarjeta / 100) * C;
   const dashTransf = (pctTransferencia / 100) * C;
   const dashBinance = (pctBinance / 100) * C;
+  const dashCashea = (pctCashea / 100) * C;
   const offTarjeta = C - dashEfectivo;
   const offTransf = C - dashEfectivo - dashTarjeta;
   const offBinance = C - dashEfectivo - dashTarjeta - dashTransf;
+  const offCashea = C - dashEfectivo - dashTarjeta - dashTransf - dashBinance;
 
   // Formato Bs.
   const fmtBs = (n) =>
@@ -497,13 +506,17 @@ export default function CierreScreen() {
         if (methodKey === "binance_usd") {
           return metodo.includes("binance") || metodo.includes("zelle");
         }
+        if (methodKey === "cashea_usd") {
+          return metodo.includes("cashea");
+        }
         if (methodKey === "transferencia_bs") {
           return (
             !metodo.includes("efectivo") &&
             !metodo.includes("punto") &&
             !metodo.includes("tarjeta") &&
             !metodo.includes("binance") &&
-            !metodo.includes("zelle")
+            !metodo.includes("zelle") &&
+            !metodo.includes("cashea")
           );
         }
         return false;
@@ -542,7 +555,8 @@ export default function CierreScreen() {
         !metodo.includes("punto") &&
         !metodo.includes("tarjeta") &&
         !metodo.includes("binance") &&
-        !metodo.includes("zelle")
+        !metodo.includes("zelle") &&
+        !metodo.includes("cashea")
       ) {
         totalBS += Number(p.monto_bs || 0);
       } else if (
@@ -550,9 +564,20 @@ export default function CierreScreen() {
         (metodo.includes("binance") || metodo.includes("zelle"))
       ) {
         totalUSD += Number(p.monto_usd || 0);
+      } else if (
+        methodKey === "cashea_usd" &&
+        metodo.includes("cashea")
+      ) {
+        totalUSD += Number(p.monto_usd || 0);
       }
     });
-    if (methodKey === "efectivo_usd") return `$${totalUSD.toFixed(2)}`;
+    if (
+      methodKey === "efectivo_usd" ||
+      methodKey === "binance_usd" ||
+      methodKey === "cashea_usd"
+    ) {
+      return `$${totalUSD.toFixed(2)}`;
+    }
     return `Bs. ${fmtBs(totalBS)}`;
   };
 
@@ -680,6 +705,19 @@ export default function CierreScreen() {
                   strokeLinecap="round"
                 />
               )}
+              {dashCashea > 0 && (
+                <circle
+                  cx="50"
+                  cy="50"
+                  r={R}
+                  fill="transparent"
+                  stroke="#ec4899"
+                  strokeWidth="10"
+                  strokeDasharray={`${dashCashea} ${C}`}
+                  strokeDashoffset={offCashea}
+                  strokeLinecap="round"
+                />
+              )}
             </svg>
             <div className="absolute inset-0 flex flex-col justify-center items-center">
               <span className="text-3xl font-black text-slate-800">
@@ -706,6 +744,11 @@ export default function CierreScreen() {
               color: "bg-amber-400",
               label: "Binance / Zelle",
               pct: pctBinance,
+            },
+            {
+              color: "bg-pink-400",
+              label: "Cashea",
+              pct: pctCashea,
             },
           ].map(({ color, label, pct }) => (
             <div key={label}>
@@ -800,6 +843,15 @@ export default function CierreScreen() {
                 sub: "Cripto / Transferencia US",
                 value: `$${Number(desglose_pagos.binance_usd || 0).toFixed(2)}`,
                 textLight: "text-amber-100",
+              },
+              {
+                key: "cashea_usd",
+                gradient: "from-[#ec4899] to-[#db2777]",
+                icon: <Wallet className="w-5 h-5" />,
+                label: "Cashea",
+                sub: "Crédito digital — en USD",
+                value: `$${Number(desglose_pagos.cashea_usd || 0).toFixed(2)}`,
+                textLight: "text-pink-100",
               },
             ];
 
@@ -1107,6 +1159,11 @@ export default function CierreScreen() {
                       label: "Binance / Zelle",
                       value: `$${Number(desglose_pagos.binance_usd || 0).toFixed(2)}`,
                       color: "text-amber-600",
+                    },
+                    {
+                      label: "Cashea",
+                      value: `$${Number(desglose_pagos.cashea_usd || 0).toFixed(2)}`,
+                      color: "text-pink-600",
                     },
                   ].map(({ label, value, color }) => (
                     <div

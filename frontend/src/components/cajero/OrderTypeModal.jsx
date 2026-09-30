@@ -24,6 +24,7 @@ import {
   Smartphone,
   Banknote,
   Coins,
+  Wallet,
 } from "lucide-react";
 
 // ─── Configuración estática ───────────────────────────────────────────────────
@@ -114,6 +115,13 @@ const PAYMENT_METHODS = [
     icon: CreditCard,
     color: "text-purple-500",
     bg: "bg-purple-50 border-purple-200 hover:border-purple-400",
+  },
+  {
+    id: "cashea",
+    label: "Cashea",
+    icon: Wallet,
+    color: "text-pink-500",
+    bg: "bg-pink-50 border-pink-200 hover:border-pink-400",
   },
   {
     id: "binance",
@@ -315,6 +323,8 @@ export default function OrderTypeModal({ onConfirm, onClose, pendingProduct }) {
         return "Efectivo";
       case "mobile":
         return "Pago_Movil";
+      case "cashea":
+        return "Cashea";
       case "binance":
         return "Binance/Zelle";
       default:

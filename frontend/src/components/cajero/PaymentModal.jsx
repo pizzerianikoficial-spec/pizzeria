@@ -8,6 +8,7 @@ import {
   Banknote,
   CreditCard,
   Coins,
+  Wallet,
   CheckCircle2,
   ChevronRight,
   AlertCircle,
@@ -34,6 +35,13 @@ const PAYMENT_METHODS = [
     icon: CreditCard,
     color: "text-purple-400",
     bg: "bg-purple-400/10 border-purple-400/30 hover:border-purple-400",
+  },
+  {
+    id: "cashea",
+    label: "Cashea",
+    icon: Wallet,
+    color: "text-pink-400",
+    bg: "bg-pink-400/10 border-pink-400/30 hover:border-pink-400",
   },
   {
     id: "binance",

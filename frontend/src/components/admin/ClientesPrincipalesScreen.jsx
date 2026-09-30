@@ -80,6 +80,17 @@ const PAYMENT_METHODS = [
     colorLight: "bg-amber-50/70",
     colorBorder: "border-amber-100/80",
   },
+  {
+    metodo: "Cashea",
+    label: "Cashea",
+    icon: Wallet,
+    color: "#EC4899",
+    colorText: "text-pink-600",
+    colorBg: "bg-pink-100",
+    colorBar: "bg-pink-500",
+    colorLight: "bg-pink-50/70",
+    colorBorder: "border-pink-100/80",
+  },
 ];
 
 const FALLBACK_METHOD = {
@@ -97,6 +108,7 @@ const getPaymentConfig = (metodoStr) => {
   const norm = String(metodoStr || "")
     .toLowerCase()
     .replace(/[\s_-]+/g, "");
+  if (norm.includes("cashea")) return PAYMENT_METHODS[4];
   if (norm.includes("punto") || norm.includes("tarjeta")) return PAYMENT_METHODS[0];
   if (norm.includes("pago") || norm.includes("movil")) return PAYMENT_METHODS[1];
   if (norm.includes("efectivo") || norm.includes("cash") || norm.includes("dolar")) return PAYMENT_METHODS[2];

@@ -181,6 +181,10 @@ const PAGO_ICONS = {
     icon: Smartphone,
     cls: "text-violet-600 bg-violet-50 border-violet-100",
   },
+  "Cashea": {
+    icon: Wallet,
+    cls: "text-pink-600 bg-pink-50 border-pink-100",
+  },
   "Binance/Zelle": {
     icon: Coins,
     cls: "text-amber-600 bg-amber-50 border-amber-100",

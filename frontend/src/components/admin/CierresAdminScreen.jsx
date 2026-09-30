@@ -1050,6 +1050,19 @@ export default function CierresAdminScreen() {
                       ).toLocaleString("en-US", { minimumFractionDigits: 2 })}
                     </span>
                   </div>
+
+                  {/* Cashea USD */}
+                  <div className="flex items-center justify-between p-3 text-sm">
+                    <span className="text-slate-600 font-medium">
+                      Cashea
+                    </span>
+                    <span className="font-bold text-pink-600">
+                      USD{" "}
+                      {Number(
+                        selectedCierre.monto_cashea_usd || 0,
+                      ).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                    </span>
+                  </div>
                 </div>
               </div>
 

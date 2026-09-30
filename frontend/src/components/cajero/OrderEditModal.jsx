@@ -73,6 +73,8 @@ export default function OrderEditModal({ pedido = {}, displayNum, onClose }) {
         return "Efectivo";
       case "mobile":
         return "Pago_Movil";
+      case "cashea":
+        return "Cashea";
       case "binance":
         return "Binance/Zelle";
       case "advance":
