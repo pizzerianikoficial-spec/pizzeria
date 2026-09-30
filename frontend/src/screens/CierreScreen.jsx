@@ -734,8 +734,8 @@ export default function CierreScreen() {
       {/* ── WALLET CARDS (CLICKABLE) ── */}
       <section
         className="relative"
-        onMouseEnter={() => setIsWalletPaused(true)}
-        onMouseLeave={() => setIsWalletPaused(false)}
+        onMouseEnter={() => setIsWalletHovering(true)}
+        onMouseLeave={() => setIsWalletHovering(false)}
       >
         <div
           ref={walletTrackRef}
