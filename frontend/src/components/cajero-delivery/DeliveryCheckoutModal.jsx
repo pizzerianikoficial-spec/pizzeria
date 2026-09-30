@@ -184,7 +184,7 @@ export default function DeliveryCheckoutModal({ onClose }) {
         method: selectedMethod.id,
         label: selectedMethod.label,
         amount: amountUSD,
-        currency: currency,
+        currency: selectedMethod?.id === "cashea" ? "USD" : currency,
       },
     ]);
     setShowPaymentEntry(false);

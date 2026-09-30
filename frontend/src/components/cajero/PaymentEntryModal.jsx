@@ -12,23 +12,34 @@ export default function PaymentEntryModal({
   // Cashea siempre se cobra/muestra en dólares (USD), sin importar la moneda activa
   const activeCurrency = method?.id === "cashea" ? "USD" : currency;
 
+  // Redondeamos el restante hacia ABAJO a 2 decimales para que el monto
+  // precargado nunca supere el saldo real restante en USD (evita falsos
+  // "El monto no puede exceder" cuando el método previo se pagó en Bs).
+  const remainingDisplayUSD =
+    remainingUSD == null
+      ? null
+      : Math.max(0, Math.floor(remainingUSD * 100) / 100);
+
   // Pre-cargar el monto restante convertido a la moneda activa
   const initialDisplay =
-    remainingUSD == null
+    remainingDisplayUSD == null
       ? ""
       : activeCurrency === "Bs"
-        ? (remainingUSD * (exchangeRate || 0)).toFixed(2)
-        : remainingUSD.toFixed(2);
+        ? (remainingDisplayUSD * (exchangeRate || 0)).toFixed(2)
+        : remainingDisplayUSD.toFixed(2);
 
   const [amountInput, setAmountInput] = React.useState(initialDisplay);
   const [error, setError] = React.useState("");
 
   const displayRemaining =
-    remainingUSD == null
+    remainingDisplayUSD == null
       ? null
       : activeCurrency === "Bs"
-        ? (remainingUSD * (exchangeRate || 0)).toFixed(2)
-        : remainingUSD.toFixed(2);
+        ? remainingDisplayUSD * (exchangeRate || 0)
+        : remainingDisplayUSD;
+
+  const displayRemainingText =
+    displayRemaining == null ? null : displayRemaining.toFixed(2);
 
   const parseToUSD = (val) => {
     const v = parseFloat(val);
@@ -42,14 +53,17 @@ export default function PaymentEntryModal({
   };
 
   const amountUSD = parseToUSD(amountInput);
+  // Tolerancia de ~1 céntimo por redondeos Bs <-> USD
+  const maxAllowedUSD =
+    remainingUSD == null ? null : remainingUSD + 0.011;
   const isValid =
     !isNaN(amountUSD) &&
     amountUSD > 0 &&
-    (remainingUSD == null || amountUSD <= remainingUSD + 0.001);
+    (maxAllowedUSD == null || amountUSD <= maxAllowedUSD);
   const exceedsMax =
-    remainingUSD != null &&
+    maxAllowedUSD != null &&
     !isNaN(amountUSD) &&
-    amountUSD > remainingUSD + 0.001;
+    amountUSD > maxAllowedUSD;
 
   // Equivalencia en tiempo real para la otra moneda
   const equivalent =
@@ -64,7 +78,10 @@ export default function PaymentEntryModal({
       setError("Monto inválido o excede el saldo restante");
       return;
     }
-    onAdd(amountUSD);
+    // Clamp: nunca añadir más de lo que queda por pagar en USD
+    const finalAmount =
+      remainingUSD == null ? amountUSD : Math.min(amountUSD, remainingUSD);
+    onAdd(finalAmount);
   };
 
   const handleKeyDown = (e) => {
@@ -84,11 +101,11 @@ export default function PaymentEntryModal({
             <h3 className="font-bold text-slate-800">{method.label}</h3>
             <p className="text-xs text-slate-500 mt-0.5">
               {remainingUSD == null ? "Monto del abono" : "Saldo restante:"}{" "}
-              {displayRemaining != null && (
+              {displayRemainingText != null && (
                 <span className="font-bold text-slate-700">
                   {activeCurrency === "Bs"
-                    ? `Bs. ${displayRemaining}`
-                    : `$${displayRemaining}`}
+                    ? `Bs. ${displayRemainingText}`
+                    : `$${displayRemainingText}`}
                 </span>
               )}
             </p>
@@ -135,10 +152,10 @@ export default function PaymentEntryModal({
           </div>
 
           {/* Atajo: rellenar monto exacto restante */}
-          {displayRemaining != null && (
+          {displayRemainingText != null && (
             <button
               onClick={() => {
-                setAmountInput(displayRemaining);
+                setAmountInput(displayRemainingText);
                 setError("");
               }}
               className="flex items-center justify-center gap-2 w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-sm font-semibold transition-colors"
@@ -146,8 +163,8 @@ export default function PaymentEntryModal({
               <Zap className="w-4 h-4 text-pizza-red" />
               Usar monto exacto (
               {activeCurrency === "Bs"
-                ? `Bs. ${displayRemaining}`
-                : `$${displayRemaining}`}
+                ? `Bs. ${displayRemainingText}`
+                : `$${displayRemainingText}`}
               )
             </button>
           )}
@@ -156,7 +173,7 @@ export default function PaymentEntryModal({
           {exceedsMax ? (
             <div className="flex items-center gap-2 text-pizza-red text-sm bg-red-50 rounded-lg px-3 py-2">
               <AlertCircle className="w-4 h-4 shrink-0" />{" "}
-              {`El monto no puede exceder ${activeCurrency === "Bs" ? `Bs. ${displayRemaining}` : `$${displayRemaining}`}`}
+              {`El monto no puede exceder ${activeCurrency === "Bs" ? `Bs. ${displayRemainingText}` : `$${displayRemainingText}`}`}
             </div>
           ) : (
             error && (
