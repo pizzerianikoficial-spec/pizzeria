@@ -115,7 +115,7 @@ function AuthenticatedLayout() {
   const activeView = location.pathname.slice(1) || "nueva-orden";
 
   return (
-    <div className="flex h-screen h-dvh w-full overflow-hidden bg-slate-50 font-sans text-slate-900">
+    <div className="app-viewport flex w-full overflow-hidden bg-slate-50 font-sans text-slate-900">
       {currentUser.role !== "chef" &&
         currentUser.role !== "despachador" &&
         currentUser.role !== "mesero" && (

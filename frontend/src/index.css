@@ -24,6 +24,24 @@
     -webkit-font-smoothing: antialiased;
   }
 
+  /*
+   * Altura real y visible de la app.
+   * En móvil/tablet, 100vh mide la pantalla SIN la barra del navegador o la
+   * barra de gestos del sistema, por eso el contenido anclado abajo (Ticket,
+   * botón Cobrar) quedaba fuera de la zona visible.
+   * 100dvh sigue a la ventana visible real. El 100vh queda solo como
+   * respaldo para navegadores sin soporte de dvh.
+   */
+  .app-viewport {
+    height: 100vh;
+  }
+
+  @supports (height: 100dvh) {
+    .app-viewport {
+      height: 100dvh;
+    }
+  }
+
   ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
