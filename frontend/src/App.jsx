@@ -49,7 +49,9 @@ function LoginRoute() {
   const { currentUser } = useApp();
 
   if (currentUser) {
-    const userRole = String(currentUser.role || "").trim().toLowerCase();
+    const userRole = String(currentUser.role || "")
+      .trim()
+      .toLowerCase();
     return (
       <Navigate
         to={ROLE_HOME[userRole] || ROLE_HOME[currentUser.role] || "/login"}
@@ -65,7 +67,9 @@ function ProtectedRoute({ roles }) {
   const { currentUser } = useApp();
 
   if (!currentUser) return <Navigate to="/login" replace />;
-  const userRole = String(currentUser.role || "").trim().toLowerCase();
+  const userRole = String(currentUser.role || "")
+    .trim()
+    .toLowerCase();
   if (roles && !roles.map((r) => r.toLowerCase()).includes(userRole)) {
     return (
       <Navigate
@@ -111,7 +115,7 @@ function AuthenticatedLayout() {
   const activeView = location.pathname.slice(1) || "nueva-orden";
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-slate-50 font-sans text-slate-900">
+    <div className="flex h-screen h-dvh w-full overflow-hidden bg-slate-50 font-sans text-slate-900">
       {currentUser.role !== "chef" &&
         currentUser.role !== "despachador" &&
         currentUser.role !== "mesero" && (
@@ -188,15 +192,31 @@ function RoutedApp() {
           </Route>
         </Route>
 
-        <Route element={<ProtectedRoute roles={["cashierdelivery", "caja delivery"]} />}>
+        <Route
+          element={
+            <ProtectedRoute roles={["cashierdelivery", "caja delivery"]} />
+          }
+        >
           <Route element={<AuthenticatedLayout />}>
-            <Route path="/caja-delivery" element={<DeliveryNuevaOrdenScreen />} />
-            <Route path="/delivery-cola" element={<DeliveryColaTrabajoScreen />} />
+            <Route
+              path="/caja-delivery"
+              element={<DeliveryNuevaOrdenScreen />}
+            />
+            <Route
+              path="/delivery-cola"
+              element={<DeliveryColaTrabajoScreen />}
+            />
             <Route path="/cierre-delivery" element={<CierreScreen />} />
           </Route>
         </Route>
 
-        <Route element={<ProtectedRoute roles={["cashier", "cashierdelivery", "caja delivery", "admin"]} />}>
+        <Route
+          element={
+            <ProtectedRoute
+              roles={["cashier", "cashierdelivery", "caja delivery", "admin"]}
+            />
+          }
+        >
           <Route element={<AuthenticatedLayout />}>
             <Route path="/entrega" element={<EntregaScreen />} />
           </Route>
