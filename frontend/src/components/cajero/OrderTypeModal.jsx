@@ -932,6 +932,8 @@ export default function OrderTypeModal({ onConfirm, onClose, pendingProduct }) {
                                   type="button"
                                   onClick={() => {
                                     setAdvancePaymentMethod(method);
+                                    if (method.id === "cashea")
+                                      setAdvanceCurrency("USD");
                                     setShowAdvancePaymentEntry(true);
                                   }}
                                   className={`flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all ${method.bg} ${isSelected ? "ring-2 ring-blue-400" : ""}`}

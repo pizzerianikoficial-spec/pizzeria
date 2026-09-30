@@ -9,11 +9,14 @@ export default function PaymentEntryModal({
   onAdd,
   onClose,
 }) {
+  // Cashea siempre se cobra/muestra en dólares (USD), sin importar la moneda activa
+  const activeCurrency = method?.id === "cashea" ? "USD" : currency;
+
   // Pre-cargar el monto restante convertido a la moneda activa
   const initialDisplay =
     remainingUSD == null
       ? ""
-      : currency === "Bs"
+      : activeCurrency === "Bs"
         ? (remainingUSD * (exchangeRate || 0)).toFixed(2)
         : remainingUSD.toFixed(2);
 
@@ -23,14 +26,14 @@ export default function PaymentEntryModal({
   const displayRemaining =
     remainingUSD == null
       ? null
-      : currency === "Bs"
+      : activeCurrency === "Bs"
         ? (remainingUSD * (exchangeRate || 0)).toFixed(2)
         : remainingUSD.toFixed(2);
 
   const parseToUSD = (val) => {
     const v = parseFloat(val);
     if (isNaN(v) || v <= 0) return NaN;
-    if (currency === "Bs") {
+    if (activeCurrency === "Bs") {
       const r = exchangeRate || 0;
       if (r <= 0) return NaN;
       return v / r;
@@ -51,7 +54,7 @@ export default function PaymentEntryModal({
   // Equivalencia en tiempo real para la otra moneda
   const equivalent =
     !isNaN(amountUSD) && amountUSD > 0 && (exchangeRate || 0) > 0
-      ? currency === "Bs"
+      ? activeCurrency === "Bs"
         ? `≈ $${amountUSD.toFixed(2)}`
         : `≈ Bs. ${(amountUSD * exchangeRate).toFixed(2)}`
       : null;
@@ -83,7 +86,7 @@ export default function PaymentEntryModal({
               {remainingUSD == null ? "Monto del abono" : "Saldo restante:"}{" "}
               {displayRemaining != null && (
                 <span className="font-bold text-slate-700">
-                  {currency === "Bs"
+                  {activeCurrency === "Bs"
                     ? `Bs. ${displayRemaining}`
                     : `$${displayRemaining}`}
                 </span>
@@ -106,7 +109,7 @@ export default function PaymentEntryModal({
             </label>
             <div className="relative">
               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-lg">
-                {currency === "Bs" ? "Bs." : "$"}
+                {activeCurrency === "Bs" ? "Bs." : "$"}
               </span>
               <input
                 type="number"
@@ -142,7 +145,7 @@ export default function PaymentEntryModal({
             >
               <Zap className="w-4 h-4 text-pizza-red" />
               Usar monto exacto (
-              {currency === "Bs"
+              {activeCurrency === "Bs"
                 ? `Bs. ${displayRemaining}`
                 : `$${displayRemaining}`}
               )
@@ -153,7 +156,7 @@ export default function PaymentEntryModal({
           {exceedsMax ? (
             <div className="flex items-center gap-2 text-pizza-red text-sm bg-red-50 rounded-lg px-3 py-2">
               <AlertCircle className="w-4 h-4 shrink-0" />{" "}
-              {`El monto no puede exceder ${currency === "Bs" ? `Bs. ${displayRemaining}` : `$${displayRemaining}`}`}
+              {`El monto no puede exceder ${activeCurrency === "Bs" ? `Bs. ${displayRemaining}` : `$${displayRemaining}`}`}
             </div>
           ) : (
             error && (

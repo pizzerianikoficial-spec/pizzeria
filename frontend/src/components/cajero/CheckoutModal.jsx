@@ -659,9 +659,11 @@ export default function CheckoutModal({ onClose }) {
                       <div key={i} className="flex justify-between text-sm">
                         <div>{p.label}</div>
                         <div>
-                          {currency === "Bs"
-                            ? `Bs. ${(p.amount * (exchangeRate || 0)).toFixed(2)}`
-                            : `$${p.amount.toFixed(2)}`}
+                          {p.method === "cashea"
+                            ? `$${p.amount.toFixed(2)}`
+                            : currency === "Bs"
+                              ? `Bs. ${(p.amount * (exchangeRate || 0)).toFixed(2)}`
+                              : `$${p.amount.toFixed(2)}`}
                         </div>
                       </div>
                     ))}

@@ -473,9 +473,11 @@ export default function DeliveryCheckoutModal({ onClose }) {
                           {p.label}
                         </span>
                         <span className="font-bold text-slate-900">
-                          {currency === "Bs"
-                            ? `Bs. ${(p.amount * (exchangeRate || 0)).toFixed(2)}`
-                            : `$${p.amount.toFixed(2)}`}
+                          {p.method === "cashea"
+                            ? `$${p.amount.toFixed(2)}`
+                            : currency === "Bs"
+                              ? `Bs. ${(p.amount * (exchangeRate || 0)).toFixed(2)}`
+                              : `$${p.amount.toFixed(2)}`}
                         </span>
                       </div>
                     ))}
