@@ -862,12 +862,14 @@ export const obtenerPedidosActivos = async (req, res) => {
       args.push(Number(id_usuario));
     }
 
+    // La cola de trabajo muestra pedidos con trabajo pendiente de cocina. Cuando
+    // el pedido pasa a 'Despacho' (entregado al cliente / al mesero) o 'Mesero'
+    // ya salio de la cola, aunque el estado de la venta siga en 'Completado'
+    // (que solo significa que la venta fue cobrada).
     query += ` AND EXISTS (
           SELECT 1 FROM venta_detalle vd
           WHERE vd.id_venta = v.id_venta
-            AND vd.estado != 'Completado'
-            AND vd.estado != 'Cerrado'
-            AND vd.estado != 'Cancelado'
+            AND vd.estado NOT IN ('Completado', 'Cerrado', 'Cancelado', 'Despacho', 'Mesero')
         )
       ORDER BY v.fecha_hora DESC`;
 

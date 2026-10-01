@@ -302,7 +302,7 @@ export const obtenerContadorCajero = async (req, res) => {
     let query = `SELECT COUNT(vd.id_detalle) AS total
        FROM venta_detalle vd
        JOIN ventas v ON vd.id_venta = v.id_venta
-       WHERE vd.estado != 'Completado' AND vd.estado != 'Cerrado' AND v.estado != 'Reembolsado'
+       WHERE vd.estado NOT IN ('Completado', 'Cerrado', 'Cancelado', 'Despacho', 'Mesero') AND v.estado != 'Reembolsado'
          AND DATE(v.fecha_hora) = DATE('now', '-4 hours')
          AND v.id_sucursal = ?`;
     let paparemericano = [id_sucursal];
@@ -352,12 +352,14 @@ export const actualizarEstadoPedido = async (req, res) => {
   }
 
   try {
-    // Se elimina el filtro estricto del estado anterior en el WHERE
+    const esEstadoFinal =
+      nuevoEstado === "Completado" || nuevoEstado === "Cerrado";
+
     const result = await executeCommand(
       `UPDATE venta_detalle
-       SET estado = ? 
-       WHERE id_venta = ? 
-         AND tipo_producto IN ('Pizza', 'Combo')
+       SET estado = ?
+       WHERE id_venta = ?
+         ${esEstadoFinal ? "" : "AND tipo_producto IN ('Pizza', 'Combo')"}
          AND EXISTS (
            SELECT 1 FROM ventas v
            WHERE v.id_venta = venta_detalle.id_venta
@@ -369,7 +371,7 @@ export const actualizarEstadoPedido = async (req, res) => {
     if (result.rowsAffected === 0) {
       return res.status(404).json({
         success: false,
-        message: "No se encontraron pizzas para este pedido.",
+        message: "No se encontraron detalles para este pedido.",
       });
     }
 
@@ -449,57 +451,57 @@ export const obtenerEntregas = async (req, res) => {
     const detallesPorVenta = agruparDetallesPorVenta(detallesBatch);
 
     const ordenes = ventas.map((venta) => {
-        const detalles = detallesPorVenta.get(venta.id_venta) || [];
+      const detalles = detallesPorVenta.get(venta.id_venta) || [];
 
-        const items = detalles.map((det) => ({
-          name: det.nombre_producto || det.tipo_producto,
-          quantity: det.cantidad,
-          type: det.tipo_producto,
-          status: det.estado_detalle,
-        }));
+      const items = detalles.map((det) => ({
+        name: det.nombre_producto || det.tipo_producto,
+        quantity: det.cantidad,
+        type: det.tipo_producto,
+        status: det.estado_detalle,
+      }));
 
-        const estaCerrada =
-          detalles.length > 0 &&
-          detalles.every((det) => det.estado_detalle === "Cerrado");
+      const estaCerrada =
+        detalles.length > 0 &&
+        detalles.every((det) => det.estado_detalle === "Cerrado");
 
-        if (estaCerrada) return null;
+      if (estaCerrada) return null;
 
-        // La orden solo está lista para entregar cuando TODOS los ítems están en estado "Despacho"
-        const todosEnDespacho =
-          detalles.length > 0 &&
-          detalles.every((det) => det.estado_detalle === "Despacho");
+      // La orden solo está lista para entregar cuando TODOS los ítems están en estado "Despacho"
+      const todosEnDespacho =
+        detalles.length > 0 &&
+        detalles.every((det) => det.estado_detalle === "Despacho");
 
-        const estaEntregada =
-          detalles.length > 0 &&
-          detalles.every(
-            (det) =>
-              det.estado_detalle === "Completado" ||
-              det.estado_detalle === "Cerrado",
-          );
+      const estaEntregada =
+        detalles.length > 0 &&
+        detalles.every(
+          (det) =>
+            det.estado_detalle === "Completado" ||
+            det.estado_detalle === "Cerrado",
+        );
 
-        return {
-          id: venta.id_venta,
-          boxes: Number(venta.cantidad_caja) || 0,
-          type:
-            venta.despacho === "Delivery"
-              ? "delivery"
-              : venta.despacho === "Pick Up"
-                ? "pickup"
-                : venta.despacho === "Local"
-                  ? "local"
-                  : "llevar",
-          customerName: venta.nombre_cliente || "Desconocido",
-          address: venta.direccion_cliente || "",
-          phone: venta.telefono_cliente || "",
-          items: items,
-          total: venta.monto_total_usd,
-          orderedAt: venta.fecha_hora,
-          status: estaEntregada
-            ? "delivered"
-            : todosEnDespacho
-              ? "ready"
-              : "preparing",
-        };
+      return {
+        id: venta.id_venta,
+        boxes: Number(venta.cantidad_caja) || 0,
+        type:
+          venta.despacho === "Delivery"
+            ? "delivery"
+            : venta.despacho === "Pick Up"
+              ? "pickup"
+              : venta.despacho === "Local"
+                ? "local"
+                : "llevar",
+        customerName: venta.nombre_cliente || "Desconocido",
+        address: venta.direccion_cliente || "",
+        phone: venta.telefono_cliente || "",
+        items: items,
+        total: venta.monto_total_usd,
+        orderedAt: venta.fecha_hora,
+        status: estaEntregada
+          ? "delivered"
+          : todosEnDespacho
+            ? "ready"
+            : "preparing",
+      };
     });
 
     const ordenesFiltradas = ordenes.filter((o) => o !== null);

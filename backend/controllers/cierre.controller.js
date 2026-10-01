@@ -16,9 +16,7 @@ export const verificarPedidosPendientes = async (req, res) => {
         AND EXISTS (
         SELECT 1 FROM venta_detalle vd
         WHERE vd.id_venta = v.id_venta
-          AND vd.estado != 'Completado' 
-          AND vd.estado != 'Cerrado'
-          AND vd.estado != 'Cancelado'
+          AND vd.estado NOT IN ('Completado', 'Cerrado', 'Cancelado', 'Despacho', 'Mesero')
           AND v.id_sucursal = ?
       );`,
       args: [despacho, despacho, id_sucursal],
