@@ -66,7 +66,7 @@ const ESTADO_BADGES = {
   },
 };
 
-const ITEMS_PER_PAGE = 15;
+const ITEMS_PER_PAGE = 10;
 
 function getElapsed(iso) {
   const mins = Math.floor((Date.now() - new Date(iso)) / 60000);
@@ -301,18 +301,17 @@ export default function DeliveryColaTrabajoScreen() {
           </div>
 
           {/* Selector de pestañas para trabajar por separado */}
-          <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 self-start sm:self-auto">
+          <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 w-full sm:w-auto overflow-x-auto">
             <button
               type="button"
               onClick={() => {
                 setViewFilter("mis");
                 setCurrentPage(1);
               }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                viewFilter === "mis"
-                  ? "bg-white text-slate-800 shadow-sm"
-                  : "text-slate-500 hover:text-slate-700"
-              }`}
+              className={`flex-1 sm:flex-initial px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-center whitespace-nowrap ${viewFilter === "mis"
+                ? "bg-white text-slate-800 shadow-sm"
+                : "text-slate-500 hover:text-slate-700"
+                }`}
             >
               Mis Pedidos
             </button>
@@ -322,11 +321,10 @@ export default function DeliveryColaTrabajoScreen() {
                 setViewFilter("todos");
                 setCurrentPage(1);
               }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                viewFilter === "todos"
-                  ? "bg-white text-slate-800 shadow-sm"
-                  : "text-slate-500 hover:text-slate-700"
-              }`}
+              className={`flex-1 sm:flex-initial px-3 py-1.5 rounded-lg text-xs font-bold transition-all text-center whitespace-nowrap ${viewFilter === "todos"
+                ? "bg-white text-slate-800 shadow-sm"
+                : "text-slate-500 hover:text-slate-700"
+                }`}
             >
               Todos los Deliveries ({allDeliveryOrders.length})
             </button>
@@ -336,7 +334,8 @@ export default function DeliveryColaTrabajoScreen() {
         {/* Contenedor de la tabla */}
         <div className="flex-1 overflow-auto bg-slate-50/30 p-3 sm:p-4 md:p-5 w-full">
           <div className="bg-white rounded-xl sm:rounded-2xl border border-slate-200/60 overflow-hidden shadow-sm">
-            <div className="overflow-x-auto pb-4">
+            {/* Tabla Desktop */}
+            <div className="hidden lg:block overflow-x-auto pb-4">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-50/70 border-b border-slate-100 text-xs sm:text-sm font-bold text-slate-500">
@@ -533,11 +532,10 @@ export default function DeliveryColaTrabajoScreen() {
                                   if (isEditDisabled) return;
                                   setEditState({ pedido, displayNum: num });
                                 }}
-                                className={`p-1.5 rounded-lg transition-colors ${
-                                  isEditDisabled
-                                    ? "text-slate-300 opacity-40 cursor-not-allowed bg-slate-50"
-                                    : "text-slate-500 hover:text-slate-800 hover:bg-slate-100 cursor-pointer"
-                                }`}
+                                className={`p-1.5 rounded-lg transition-colors ${isEditDisabled
+                                  ? "text-slate-300 opacity-40 cursor-not-allowed bg-slate-50"
+                                  : "text-slate-500 hover:text-slate-800 hover:bg-slate-100 cursor-pointer"
+                                  }`}
                                 title={
                                   isEditDisabled
                                     ? isEnHorno
@@ -566,30 +564,230 @@ export default function DeliveryColaTrabajoScreen() {
               </table>
             </div>
 
-            {/* Paginación */}
-            {totalPages > 1 && (
-              <div className="p-3 border-t border-slate-100 bg-white flex items-center justify-between text-xs font-semibold text-slate-600">
+            {/* Vista Móvil: Cards */}
+            <div className="lg:hidden flex flex-col gap-3 p-3 sm:p-4">
+              {pedidos.length === 0 ? (
+                <div className="py-16 text-center text-slate-400">
+                  <Bike className="w-12 h-12 mx-auto mb-2 text-slate-300" />
+                  <p className="font-bold text-slate-600 text-base">
+                    No hay pedidos delivery activos
+                  </p>
+                  <p className="text-xs mt-0.5">
+                    {viewFilter === "mis"
+                      ? "Los pedidos registrados por esta caja aparecerán aquí."
+                      : "No hay entregas pendientes registradas en esta sucursal."}
+                  </p>
+                </div>
+              ) : (
+                paginatedPedidos.map((pedido) => {
+                  const num = numMap[pedido.id_venta] ?? 1;
+
+                  const cocinaDetalles = (pedido.detalles || []).filter(
+                    (d) =>
+                      d.tipo_producto !== "Bebida" &&
+                      d.tipo_producto !== "Helado",
+                  );
+                  const detallesParaEstado =
+                    cocinaDetalles.length > 0
+                      ? cocinaDetalles
+                      : pedido.detalles || [];
+                  const estados =
+                    detallesParaEstado.map((d) => d.estado_detalle) || [];
+
+                  let estadoObj = ESTADO_BADGES.Completado;
+                  if (estados.includes("Pendiente"))
+                    estadoObj = ESTADO_BADGES.Pendiente;
+                  else if (estados.includes("Preparado"))
+                    estadoObj = ESTADO_BADGES.Preparado;
+                  else if (estados.includes("Horno"))
+                    estadoObj = ESTADO_BADGES.Horno;
+                  else if (estados.includes("pDespacho"))
+                    estadoObj = ESTADO_BADGES.pDespacho;
+                  else if (estados.includes("Despacho"))
+                    estadoObj = ESTADO_BADGES.Despacho;
+
+                  const primerDetalleConNota = pedido.detalles?.find(
+                    (d) => d.nota,
+                  );
+                  const notaTexto = primerDetalleConNota?.nota || "";
+
+                  const isPendiente =
+                    estadoObj === ESTADO_BADGES.Pendiente &&
+                    !estados.includes("Horno");
+
+                  const isEnHorno =
+                    !isPendiente &&
+                    (estadoObj === ESTADO_BADGES.Horno ||
+                      estados.includes("Horno"));
+
+                  const isEditDisabled = !isPendiente;
+
+                  return (
+                    <div
+                      key={pedido.id_venta}
+                      className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-sm flex flex-col gap-3 hover:border-slate-300 transition-all"
+                    >
+                      {/* Top Header Card: # Pedido, Tiempo y Estado */}
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <span className="font-black text-slate-900 text-base bg-red-50 text-pizza-red px-2.5 py-1 rounded-lg border border-red-100">
+                            #{num}
+                          </span>
+                          <span className="text-xs text-slate-400 font-medium flex items-center gap-1">
+                            <Clock className="w-3.5 h-3.5 text-slate-400" />
+                            {getElapsed(pedido.fecha_hora)}
+                          </span>
+                        </div>
+                        <span
+                          className={`inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full ${estadoObj.bg} ${estadoObj.text}`}
+                        >
+                          <span
+                            className={`w-1.5 h-1.5 rounded-full ${estadoObj.dot}`}
+                          />
+                          {estadoObj.label}
+                        </span>
+                      </div>
+
+                      {/* Info Cliente, Teléfono, Dirección & Total */}
+                      <div className="flex items-start justify-between gap-2 pt-1 border-t border-slate-100/80">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-bold text-slate-800 text-sm truncate">
+                            {pedido.nombre_cliente || "Cliente Delivery"}
+                          </p>
+                          {pedido.telefono_cliente && (
+                            <p className="text-xs text-slate-500 font-medium flex items-center gap-1 mt-0.5">
+                              <Phone className="w-3 h-3 text-slate-400 shrink-0" />
+                              {pedido.telefono_cliente}
+                            </p>
+                          )}
+                          {notaTexto && (
+                            <p
+                              className="text-xs text-slate-600 flex items-start gap-1 mt-1 font-medium bg-red-50/50 p-1.5 rounded-lg border border-red-100/60"
+                              title={notaTexto}
+                            >
+                              <MapPin className="w-3.5 h-3.5 text-pizza-red shrink-0 mt-0.5" />
+                              <span className="line-clamp-2">{notaTexto}</span>
+                            </p>
+                          )}
+                        </div>
+                        <div className="text-right shrink-0">
+                          <span className="text-xs text-slate-400 block font-medium">Total</span>
+                          <span className="font-black text-slate-900 text-base">
+                            ${Number(pedido.monto_total_usd || 0).toFixed(2)}
+                          </span>
+                          <span className="text-[11px] text-slate-400 font-medium block">
+                            Bs. {Number(pedido.monto_total_bs || 0).toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Detalle Productos */}
+                      <div className="space-y-1.5 bg-slate-50/70 p-2.5 rounded-xl border border-slate-100">
+                        <div className="flex flex-wrap gap-1.5">
+                          {(pedido.detalles || []).map((det, idx) => (
+                            <span
+                              key={idx}
+                              className="text-xs bg-white text-slate-800 px-2 py-0.5 rounded-md font-medium border border-slate-200/80 shadow-2xs"
+                            >
+                              <span className="font-bold text-slate-900">
+                                {det.cantidad}×
+                              </span>{" "}
+                              {det.nombre_producto || "Producto"}
+                              {det.extras && det.extras.length > 0 && (
+                                <span className="text-[10px] text-pizza-red font-bold ml-1">
+                                  (+{det.extras.length} ext)
+                                </span>
+                              )}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Botones de Acción */}
+                      <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
+                        <button
+                          type="button"
+                          disabled={isEditDisabled}
+                          onClick={() => {
+                            if (isEditDisabled) return;
+                            setEditState({ pedido, displayNum: num });
+                          }}
+                          className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-bold rounded-xl transition-all ${isEditDisabled
+                            ? "text-slate-300 bg-slate-50 cursor-not-allowed border border-slate-100"
+                            : "text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200/80 active:scale-[0.98]"
+                            }`}
+                          title={
+                            isEditDisabled
+                              ? isEnHorno
+                                ? "No se puede editar: el pedido ya está en el horno"
+                                : "No se puede editar: el pedido ya está listo o despachado"
+                              : "Editar pedido"
+                          }
+                        >
+                          <Edit3 className={`w-3.5 h-3.5 ${isEditDisabled ? "text-slate-300" : "text-slate-500"}`} />
+                          <span>
+                            {isEditDisabled
+                              ? isEnHorno
+                                ? "En Horno"
+                                : "Listo"
+                              : "Editar"}
+                          </span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setReembolsoState(pedido)}
+                          className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-bold rounded-xl text-red-600 bg-red-50 hover:bg-red-100 border border-red-100 transition-all active:scale-[0.98]"
+                          title="Reembolso"
+                        >
+                          <Undo2 className="w-3.5 h-3.5 text-red-500" />
+                          <span>Reembolso</span>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Paginación de 10 por página al pie de la tabla */}
+            {pedidos.length > 0 && (
+              <div className="px-4 py-3 sm:px-6 sm:py-4 bg-white border-t border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0 text-xs text-slate-600 shrink-0">
                 <span>
-                  Página {currentPage} de {totalPages}
+                  Mostrando{" "}
+                  <span className="font-bold text-slate-800">
+                    {(currentPage - 1) * ITEMS_PER_PAGE + 1}
+                  </span>{" "}
+                  -{" "}
+                  <span className="font-bold text-slate-800">
+                    {Math.min(currentPage * ITEMS_PER_PAGE, pedidos.length)}
+                  </span>{" "}
+                  de{" "}
+                  <span className="font-bold text-slate-800">{pedidos.length}</span>{" "}
+                  pedidos
                 </span>
-                <div className="flex gap-1">
+
+                <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    disabled={currentPage === 1}
                     onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                    className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-40"
+                    disabled={currentPage === 1}
+                    className="flex items-center gap-1 px-4 py-2 rounded-xl border border-slate-200 bg-white font-bold text-xs text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all shadow-sm"
                   >
-                    <ChevronLeft className="w-4 h-4" />
+                    <ChevronLeft className="w-4 h-4" /> Anterior
                   </button>
+                  <span className="font-bold text-slate-800 px-2">
+                    Página {currentPage} de {totalPages}
+                  </span>
                   <button
                     type="button"
-                    disabled={currentPage === totalPages}
                     onClick={() =>
                       setCurrentPage((p) => Math.min(totalPages, p + 1))
                     }
-                    className="p-1.5 rounded-lg border border-slate-200 hover:bg-slate-50 disabled:opacity-40"
+                    disabled={currentPage === totalPages}
+                    className="flex items-center gap-1 px-4 py-2 rounded-xl border border-slate-200 bg-white font-bold text-xs text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all shadow-sm"
                   >
-                    <ChevronRight className="w-4 h-4" />
+                    Siguiente <ChevronRight className="w-4 h-4" />
                   </button>
                 </div>
               </div>

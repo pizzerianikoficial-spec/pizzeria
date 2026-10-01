@@ -1,4 +1,4 @@
-import { useMemo, useState, useRef } from "react";
+import { useMemo, useState } from "react";
 import {
   Pizza,
   DollarSign,
@@ -13,7 +13,6 @@ import {
   ChevronLeft,
   ChevronRight,
   MessageSquare,
-  EllipsisVertical,
   Undo2,
 } from "lucide-react";
 import OrderEditModal from "../components/cajero/OrderEditModal";
@@ -76,7 +75,7 @@ const ESTADO_BADGES = {
   },
 };
 
-const ITEMS_PER_PAGE = 15;
+const ITEMS_PER_PAGE = 10;
 
 function getElapsed(iso) {
   const mins = Math.floor((Date.now() - new Date(iso)) / 60000);
@@ -148,9 +147,7 @@ export default function ColaTrabajoScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
 
-  const [openMenuId, setOpenMenuId] = useState(null);
   const [reembolsoState, setReembolsoState] = useState(null);
-  const menuRef = useRef(null);
 
   const loading = ventasLoading || pedidosLoading || metricsHoy === null;
   const pedidos = Array.isArray(pedidosActivos) ? pedidosActivos : [];
@@ -265,7 +262,7 @@ export default function ColaTrabajoScreen() {
 
       {/* Tabla Limpia de Pedidos */}
       <div className="flex-1 flex flex-col min-h-[520px] bg-white border border-slate-200/60 rounded-xl sm:rounded-2xl md:rounded-[2rem] overflow-hidden shadow-sm">
-        <div className="bg-white px-4 py-3 sm:px-5 sm:py-4 md:px-6 md:py-5 border-b border-slate-100 flex flex-col lg:flex-row lg:items-center justify-between items-start gap-2 lg:gap-0 shrink-0">
+        <div className="bg-white px-4 py-3 sm:px-5 sm:py-4 md:px-6 md:py-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
           <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
             <h2 className="text-lg md:text-xl font-black text-slate-800 flex items-center gap-2.5">
               <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-emerald-50 flex items-center justify-center">
@@ -277,14 +274,16 @@ export default function ColaTrabajoScreen() {
               {pedidos.length} Pedidos
             </span>
           </div>
-          <p className="text-xs font-medium text-slate-500">
+          <p className="text-xs font-medium text-slate-500 sm:text-right">
             Pedidos registrados hoy
           </p>
         </div>
 
-        <div className="flex-1 overflow-auto bg-slate-50/30 p-3 sm:p-4 md:p-5">
+        {/* Contenedor de la tabla */}
+        <div className="flex-1 overflow-auto bg-slate-50/30 p-3 sm:p-4 md:p-5 w-full">
           <div className="bg-white rounded-xl sm:rounded-2xl border border-slate-200/60 overflow-hidden shadow-sm">
-            <div className="overflow-x-auto pb-32">
+            {/* Tabla Desktop */}
+            <div className="hidden lg:block overflow-x-auto pb-4">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-slate-50/70 border-b border-slate-100 text-xs sm:text-sm font-bold text-slate-500">
@@ -319,11 +318,11 @@ export default function ColaTrabajoScreen() {
                         className="py-20 text-center text-slate-400"
                       >
                         <Package className="w-12 h-12 mx-auto mb-2 text-slate-300" />
-                        <p className="font-semibold text-slate-600 text-base">
+                        <p className="font-bold text-slate-600 text-base">
                           No hay pedidos activos
                         </p>
-                        <p className="text-xs">
-                          Los nuevos pedidos se listarán aquí
+                        <p className="text-xs mt-0.5">
+                          Los nuevos pedidos registrados aparecerán aquí
                         </p>
                       </td>
                     </tr>
@@ -334,7 +333,7 @@ export default function ColaTrabajoScreen() {
                         DESPACHO_BADGES[pedido.despacho] ||
                         DESPACHO_BADGES.Local;
 
-                      // Estado más crítico (excluyendo bebidas/helados que nacen completados)
+                      // Determinar estado más relevante (excluyendo bebidas/helados que nacen completados)
                       const cocinaDetalles = (pedido.detalles || []).filter(
                         (d) =>
                           d.tipo_producto !== "Bebida" &&
@@ -355,7 +354,6 @@ export default function ColaTrabajoScreen() {
                       else if (estados.includes("Horno"))
                         estadoObj = ESTADO_BADGES.Horno;
 
-                      // Observación general si existe
                       const obs = pedido.detalles?.find(
                         (d) => d.nota && d.nota.trim(),
                       )?.nota;
@@ -369,40 +367,47 @@ export default function ColaTrabajoScreen() {
                         (estadoObj === ESTADO_BADGES.Horno ||
                           estados.includes("Horno"));
 
-                      const isReembolsable = isPendiente;
-
                       const isEditDisabled = !isPendiente;
 
                       return (
                         <tr
                           key={pedido.id_venta}
-                          className={`hover:bg-slate-50/80 transition-colors relative ${openMenuId === pedido.id_venta ? "z-50" : "z-0"}`}
+                          className="hover:bg-slate-50/60 transition-colors group"
                         >
-                          {/* Pedido # + Tiempo */}
-                          <td className="py-3 px-3 sm:px-4 sm:py-3.5 md:px-6 md:py-3.5 whitespace-nowrap">
-                            <span className="font-bold text-slate-800 text-base">
-                              #{String(num).padStart(3, "0")}
-                            </span>
-                            <div className="text-xs text-slate-400 flex items-center gap-1 mt-0.5 font-medium">
-                              <Clock className="w-3.5 h-3.5 text-slate-400" />
-                              {getElapsed(pedido.fecha_hora)}
+                          {/* Col 1: Pedido */}
+                          <td className="py-3 px-3 sm:px-4 sm:py-3.5 md:px-6 md:py-3.5">
+                            <div className="flex flex-col">
+                              <span className="font-black text-slate-800 text-sm">
+                                #{num}
+                              </span>
+                              <span className="text-[10px] text-slate-500 font-semibold flex items-center gap-1 mt-1">
+                                <Clock className="w-3 h-3 text-slate-400" />
+                                {getElapsed(pedido.fecha_hora)}
+                              </span>
                             </div>
                           </td>
 
-                          {/* Cliente */}
-                          <td className="py-3 px-3 sm:px-4 sm:py-3.5 md:px-6 md:py-3.5 whitespace-nowrap">
-                            <p className="font-semibold text-slate-800 text-sm">
-                              {pedido.nombre_cliente || "Sin cliente"}
-                            </p>
-                            {pedido.cedula_cliente && (
-                              <p className="text-xs text-slate-400">
-                                V-{pedido.cedula_cliente}
-                              </p>
-                            )}
+                          {/* Col 2: Cliente */}
+                          <td className="py-3 px-3 sm:px-4 md:px-6 align-top min-w-[140px]">
+                            <div className="flex flex-col gap-0.5">
+                              <span className="font-bold text-slate-800 text-xs sm:text-sm truncate">
+                                {pedido.nombre_cliente || "Sin cliente"}
+                              </span>
+                              {pedido.cedula_cliente && (
+                                <span className="text-[11px] text-slate-500 font-medium">
+                                  V-{pedido.cedula_cliente}
+                                </span>
+                              )}
+                              {pedido.telefono_cliente && (
+                                <span className="text-[11px] text-slate-500 font-medium">
+                                  {pedido.telefono_cliente}
+                                </span>
+                              )}
+                            </div>
                           </td>
 
-                          {/* Tipo Despacho */}
-                          <td className="py-3 px-3 sm:px-4 sm:py-3.5 md:px-6 md:py-3.5 whitespace-nowrap">
+                          {/* Col 3: Tipo Despacho */}
+                          <td className="py-3 px-3 sm:px-4 md:px-6 align-top whitespace-nowrap">
                             <span
                               className={`inline-block text-xs font-semibold px-2.5 py-1 rounded-md border ${despacho.bg} ${despacho.text} ${despacho.border}`}
                             >
@@ -410,140 +415,90 @@ export default function ColaTrabajoScreen() {
                             </span>
                           </td>
 
-                          {/* Detalle */}
-                          <td className="py-4 px-6">
+                          {/* Col 4: Productos */}
+                          <td className="py-3 px-3 sm:px-4 md:px-6 align-top min-w-[200px]">
                             <div className="flex flex-col gap-1">
-                              <div className="flex flex-wrap gap-1.5">
-                                {pedido.detalles?.map((d, i) => (
-                                  <span
-                                    key={i}
-                                    className="text-xs bg-slate-100 text-slate-800 px-2.5 py-1 rounded font-medium border border-slate-200/60"
-                                  >
-                                    <span className="font-bold">
-                                      {d.cantidad}x
-                                    </span>{" "}
-                                    {d.nombre_producto || d.tipo_producto}
-                                    {d.extras?.length > 0 && (
-                                      <span className="text-pizza-red ml-1 font-bold">
-                                        (+{d.extras.length} ext)
-                                      </span>
-                                    )}
+                              {(pedido.detalles || []).map((det, idx) => (
+                                <div
+                                  key={idx}
+                                  className="text-xs text-slate-700 flex items-start gap-1"
+                                >
+                                  <span className="font-black text-slate-900 shrink-0">
+                                    {det.cantidad}×
                                   </span>
-                                ))}
-                              </div>
+                                  <span className="font-semibold truncate">
+                                    {det.nombre_producto || det.tipo_producto || "Producto"}
+                                  </span>
+                                  {det.extras && det.extras.length > 0 && (
+                                    <span className="text-[10px] text-pizza-red font-bold">
+                                      (+{det.extras.length} ext)
+                                    </span>
+                                  )}
+                                </div>
+                              ))}
                               {obs && (
-                                <p className="text-xs text-amber-700 font-medium flex items-center gap-1 mt-0.5">
-                                  <MessageSquare className="w-3.5 h-3.5 shrink-0" />
+                                <p className="text-[11px] text-amber-700 font-medium flex items-center gap-1 mt-0.5">
+                                  <MessageSquare className="w-3 h-3 shrink-0" />
                                   <span className="truncate">"{obs}"</span>
                                 </p>
                               )}
                             </div>
                           </td>
 
-                          {/* Total */}
-                          <td className="py-4 px-6 text-right font-black text-slate-800 text-base whitespace-nowrap">
-                            ${pedido.monto_total_usd?.toFixed(2) ?? "—"}
+                          {/* Col 5: Total */}
+                          <td className="py-3 px-3 sm:px-4 md:px-6 align-top text-right whitespace-nowrap">
+                            <div className="font-black text-slate-800 text-sm">
+                              ${Number(pedido.monto_total_usd || 0).toFixed(2)}
+                            </div>
+                            <div className="text-[11px] text-slate-400 font-medium">
+                              Bs. {Number(pedido.monto_total_bs || 0).toFixed(2)}
+                            </div>
                           </td>
 
-                          {/* Estado */}
-                          <td className="py-4 px-6 text-center whitespace-nowrap">
+                          {/* Col 6: Estado */}
+                          <td className="py-3 px-3 sm:px-4 md:px-6 align-top text-center whitespace-nowrap">
                             <span
-                              className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full ${estadoObj.bg} ${estadoObj.text}`}
+                              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${estadoObj.bg} ${estadoObj.text}`}
                             >
                               <span
-                                className={`w-1.5 h-1.5 rounded-full ${estadoObj.dot}`}
+                                className={`w-2 h-2 rounded-full ${estadoObj.dot}`}
                               />
                               {estadoObj.label}
                             </span>
                           </td>
 
-                          {/* Acciones */}
-                          <td className="py-4 px-6 text-center whitespace-nowrap relative">
-                            <div
-                              className="relative inline-block text-left"
-                              ref={menuRef}
-                            >
+                          {/* Col 7: Acciones */}
+                          <td className="py-3 px-3 sm:px-4 md:px-6 align-top text-center">
+                            <div className="flex items-center justify-center gap-1.5">
                               <button
-                                onClick={() =>
-                                  setOpenMenuId(
-                                    openMenuId === pedido.id_venta
-                                      ? null
-                                      : pedido.id_venta,
-                                  )
+                                type="button"
+                                disabled={isEditDisabled}
+                                onClick={() => {
+                                  if (isEditDisabled) return;
+                                  setEditState({ pedido, displayNum: num });
+                                }}
+                                className={`p-1.5 rounded-lg transition-colors ${isEditDisabled
+                                  ? "text-slate-300 opacity-40 cursor-not-allowed bg-slate-50"
+                                  : "text-slate-500 hover:text-slate-800 hover:bg-slate-100 cursor-pointer"
+                                  }`}
+                                title={
+                                  isEditDisabled
+                                    ? isEnHorno
+                                      ? "No se puede editar: el pedido ya está en el horno"
+                                      : "No se puede editar: el pedido ya está listo"
+                                    : "Editar pedido"
                                 }
-                                className="p-2 rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-800 transition-all cursor-pointer shadow-sm"
                               >
-                                <EllipsisVertical className="w-4 h-4" />
+                                <Edit3 className="w-4 h-4" />
                               </button>
-
-                              {/* Dropdown Menu */}
-                              {openMenuId === pedido.id_venta && (
-                                <div className="absolute right-0 z-50 mt-2 w-52 rounded-xl bg-white shadow-lg ring-1 ring-black ring-opacity-5 border border-slate-100 overflow-hidden animate-in fade-in zoom-in-95">
-                                  <div className="py-1">
-                                    <button
-                                      type="button"
-                                      disabled={isEditDisabled}
-                                      onClick={() => {
-                                        if (isEditDisabled) return;
-                                        setEditState({
-                                          pedido: JSON.parse(
-                                            JSON.stringify(pedido),
-                                          ),
-                                          displayNum: num,
-                                        });
-                                        setOpenMenuId(null);
-                                      }}
-                                      title={
-                                        isEditDisabled
-                                          ? isEnHorno
-                                            ? "No se puede editar: el pedido ya está en el horno"
-                                            : "No se puede editar: el pedido ya está listo"
-                                          : "Editar Pedido"
-                                      }
-                                      className={`w-full text-left px-4 py-2.5 text-sm flex items-center justify-between gap-3 transition-colors ${
-                                        isEditDisabled
-                                          ? "text-slate-300 bg-slate-50/50 cursor-not-allowed opacity-60"
-                                          : "text-slate-700 hover:bg-slate-50 cursor-pointer"
-                                      }`}
-                                    >
-                                      <div className="flex items-center gap-3">
-                                        <Edit3
-                                          className={`w-4 h-4 ${isEditDisabled ? "text-slate-300" : "text-slate-400"}`}
-                                        />
-                                        <span>Editar Pedido</span>
-                                      </div>
-                                      {isEditDisabled && (
-                                        <span
-                                          className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${
-                                            isEnHorno
-                                              ? "text-orange-700 bg-orange-100/80 border-orange-200"
-                                              : "text-emerald-700 bg-emerald-100/80 border-emerald-200"
-                                          }`}
-                                        >
-                                          {isEnHorno ? "En Horno" : "Listo"}
-                                        </span>
-                                      )}
-                                    </button>
-
-                                    <button
-                                      onClick={() => {
-                                        setReembolsoState({
-                                          pedido: JSON.parse(
-                                            JSON.stringify(pedido),
-                                          ),
-                                          displayNum: num,
-                                        });
-                                        setOpenMenuId(null);
-                                      }}
-                                      title="Procesar reembolso de este pedido"
-                                      className="w-full text-left px-4 py-2.5 text-sm flex items-center gap-3 transition-colors border-t border-slate-100 text-red-600 hover:bg-red-50 cursor-pointer"
-                                    >
-                                      <Undo2 className="w-4 h-4 text-red-400" />
-                                      <span>Reembolso</span>
-                                    </button>
-                                  </div>
-                                </div>
-                              )}
+                              <button
+                                type="button"
+                                onClick={() => setReembolsoState(pedido)}
+                                className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
+                                title="Reembolso"
+                              >
+                                <Undo2 className="w-4 h-4" />
+                              </button>
                             </div>
                           </td>
                         </tr>
@@ -553,67 +508,265 @@ export default function ColaTrabajoScreen() {
                 </tbody>
               </table>
             </div>
+
+            {/* Vista Móvil: Cards */}
+            <div className="lg:hidden flex flex-col gap-3 p-3 sm:p-4">
+              {pedidos.length === 0 ? (
+                <div className="py-16 text-center text-slate-400">
+                  <Package className="w-12 h-12 mx-auto mb-2 text-slate-300" />
+                  <p className="font-bold text-slate-600 text-base">
+                    No hay pedidos activos
+                  </p>
+                  <p className="text-xs mt-0.5">
+                    Los nuevos pedidos registrados aparecerán aquí
+                  </p>
+                </div>
+              ) : (
+                paginatedPedidos.map((pedido) => {
+                  const num = numMap[pedido.id_venta] ?? 1;
+                  const despacho =
+                    DESPACHO_BADGES[pedido.despacho] ||
+                    DESPACHO_BADGES.Local;
+
+                  const cocinaDetalles = (pedido.detalles || []).filter(
+                    (d) =>
+                      d.tipo_producto !== "Bebida" &&
+                      d.tipo_producto !== "Helado",
+                  );
+                  const detallesParaEstado =
+                    cocinaDetalles.length > 0
+                      ? cocinaDetalles
+                      : pedido.detalles || [];
+                  const estados =
+                    detallesParaEstado.map((d) => d.estado_detalle) || [];
+
+                  let estadoObj = ESTADO_BADGES.Completado;
+                  if (estados.includes("Pendiente"))
+                    estadoObj = ESTADO_BADGES.Pendiente;
+                  else if (estados.includes("Preparado"))
+                    estadoObj = ESTADO_BADGES.Preparado;
+                  else if (estados.includes("Horno"))
+                    estadoObj = ESTADO_BADGES.Horno;
+
+                  const obs = pedido.detalles?.find(
+                    (d) => d.nota && d.nota.trim(),
+                  )?.nota;
+
+                  const isPendiente =
+                    estadoObj === ESTADO_BADGES.Pendiente &&
+                    !estados.includes("Horno");
+
+                  const isEnHorno =
+                    !isPendiente &&
+                    (estadoObj === ESTADO_BADGES.Horno ||
+                      estados.includes("Horno"));
+
+                  const isEditDisabled = !isPendiente;
+
+                  return (
+                    <div
+                      key={pedido.id_venta}
+                      className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-sm flex flex-col gap-3 hover:border-slate-300 transition-all"
+                    >
+                      {/* Top Header Card: # Pedido, Tiempo, Despacho y Estado */}
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <span className="font-black text-slate-900 text-base bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-lg border border-emerald-100">
+                            #{num}
+                          </span>
+                          <span className="text-xs text-slate-400 font-medium flex items-center gap-1">
+                            <Clock className="w-3.5 h-3.5 text-slate-400" />
+                            {getElapsed(pedido.fecha_hora)}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                          <span
+                            className={`inline-block text-[11px] font-bold px-2 py-0.5 rounded-md border ${despacho.bg} ${despacho.text} ${despacho.border}`}
+                          >
+                            {despacho.label}
+                          </span>
+                          <span
+                            className={`inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full ${estadoObj.bg} ${estadoObj.text}`}
+                          >
+                            <span
+                              className={`w-1.5 h-1.5 rounded-full ${estadoObj.dot}`}
+                            />
+                            {estadoObj.label}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Info Cliente & Total */}
+                      <div className="flex items-start justify-between gap-2 pt-1 border-t border-slate-100/80">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-bold text-slate-800 text-sm truncate">
+                            {pedido.nombre_cliente || "Sin cliente"}
+                          </p>
+                          {pedido.cedula_cliente && (
+                            <p className="text-xs text-slate-500 font-medium mt-0.5">
+                              V-{pedido.cedula_cliente}
+                            </p>
+                          )}
+                          {pedido.telefono_cliente && (
+                            <p className="text-xs text-slate-500 font-medium mt-0.5">
+                              {pedido.telefono_cliente}
+                            </p>
+                          )}
+                        </div>
+                        <div className="text-right shrink-0">
+                          <span className="text-xs text-slate-400 block font-medium">Total</span>
+                          <span className="font-black text-slate-900 text-base">
+                            ${Number(pedido.monto_total_usd || 0).toFixed(2)}
+                          </span>
+                          <span className="text-[11px] text-slate-400 font-medium block">
+                            Bs. {Number(pedido.monto_total_bs || 0).toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Detalle Productos */}
+                      <div className="space-y-1.5 bg-slate-50/70 p-2.5 rounded-xl border border-slate-100">
+                        <div className="flex flex-wrap gap-1.5">
+                          {(pedido.detalles || []).map((det, idx) => (
+                            <span
+                              key={idx}
+                              className="text-xs bg-white text-slate-800 px-2 py-0.5 rounded-md font-medium border border-slate-200/80 shadow-2xs"
+                            >
+                              <span className="font-bold text-slate-900">
+                                {det.cantidad}×
+                              </span>{" "}
+                              {det.nombre_producto || det.tipo_producto || "Producto"}
+                              {det.extras && det.extras.length > 0 && (
+                                <span className="text-[10px] text-pizza-red font-bold ml-1">
+                                  (+{det.extras.length} ext)
+                                </span>
+                              )}
+                            </span>
+                          ))}
+                        </div>
+                        {obs && (
+                          <p className="text-xs text-amber-700 font-medium flex items-center gap-1 pt-1 border-t border-slate-200/60 mt-1">
+                            <MessageSquare className="w-3.5 h-3.5 shrink-0" />
+                            <span className="truncate">"{obs}"</span>
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Botones de Acción */}
+                      <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
+                        <button
+                          type="button"
+                          disabled={isEditDisabled}
+                          onClick={() => {
+                            if (isEditDisabled) return;
+                            setEditState({ pedido, displayNum: num });
+                          }}
+                          className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-bold rounded-xl transition-all ${isEditDisabled
+                            ? "text-slate-300 bg-slate-50 cursor-not-allowed border border-slate-100"
+                            : "text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200/80 active:scale-[0.98]"
+                            }`}
+                          title={
+                            isEditDisabled
+                              ? isEnHorno
+                                ? "No se puede editar: el pedido ya está en el horno"
+                                : "No se puede editar: el pedido ya está listo"
+                              : "Editar pedido"
+                          }
+                        >
+                          <Edit3 className={`w-3.5 h-3.5 ${isEditDisabled ? "text-slate-300" : "text-slate-500"}`} />
+                          <span>
+                            {isEditDisabled
+                              ? isEnHorno
+                                ? "En Horno"
+                                : "Listo"
+                              : "Editar"}
+                          </span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setReembolsoState(pedido)}
+                          className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-bold rounded-xl text-red-600 bg-red-50 hover:bg-red-100 border border-red-100 transition-all active:scale-[0.98]"
+                          title="Reembolso"
+                        >
+                          <Undo2 className="w-3.5 h-3.5 text-red-500" />
+                          <span>Reembolso</span>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Paginación de 10 por página al pie de la tabla */}
+            {pedidos.length > 0 && (
+              <div className="px-4 py-3 sm:px-6 sm:py-4 bg-white border-t border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0 text-xs text-slate-600 shrink-0">
+                <span>
+                  Mostrando{" "}
+                  <span className="font-bold text-slate-800">
+                    {(currentPage - 1) * ITEMS_PER_PAGE + 1}
+                  </span>{" "}
+                  -{" "}
+                  <span className="font-bold text-slate-800">
+                    {Math.min(currentPage * ITEMS_PER_PAGE, pedidos.length)}
+                  </span>{" "}
+                  de{" "}
+                  <span className="font-bold text-slate-800">{pedidos.length}</span>{" "}
+                  pedidos
+                </span>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="flex items-center gap-1 px-4 py-2 rounded-xl border border-slate-200 bg-white font-bold text-xs text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all shadow-sm"
+                  >
+                    <ChevronLeft className="w-4 h-4" /> Anterior
+                  </button>
+                  <span className="font-bold text-slate-800 px-2">
+                    Página {currentPage} de {totalPages}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setCurrentPage((p) => Math.min(totalPages, p + 1))
+                    }
+                    disabled={currentPage === totalPages}
+                    className="flex items-center gap-1 px-4 py-2 rounded-xl border border-slate-200 bg-white font-bold text-xs text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all shadow-sm"
+                  >
+                    Siguiente <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
-
-        {/* Paginación de 15 por página al pie de la tabla */}
-        {pedidos.length > 0 && (
-          <div className="px-4 py-3 sm:px-6 sm:py-4 bg-white border-t border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0 text-xs text-slate-600 shrink-0">
-            <span>
-              Mostrando{" "}
-              <span className="font-bold text-slate-800">
-                {(currentPage - 1) * ITEMS_PER_PAGE + 1}
-              </span>{" "}
-              -{" "}
-              <span className="font-bold text-slate-800">
-                {Math.min(currentPage * ITEMS_PER_PAGE, pedidos.length)}
-              </span>{" "}
-              de{" "}
-              <span className="font-bold text-slate-800">{pedidos.length}</span>{" "}
-              pedidos
-            </span>
-
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                className="flex items-center gap-1 px-4 py-2 rounded-xl border border-slate-200 bg-white font-bold text-xs text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all shadow-sm"
-              >
-                <ChevronLeft className="w-4 h-4" /> Anterior
-              </button>
-              <span className="font-bold text-slate-800 px-2">
-                Página {currentPage} de {totalPages}
-              </span>
-              <button
-                onClick={() =>
-                  setCurrentPage((p) => Math.min(totalPages, p + 1))
-                }
-                disabled={currentPage === totalPages}
-                className="flex items-center gap-1 px-4 py-2 rounded-xl border border-slate-200 bg-white font-bold text-xs text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all shadow-sm"
-              >
-                Siguiente <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        )}
       </div>
 
-      {/* Modal de edición */}
+      {/* Modales Compartidos */}
       {editState && (
         <OrderEditModal
-          key={editState.pedido.id_venta}
+          key={editState.pedido?.id_venta}
           pedido={editState.pedido}
           displayNum={editState.displayNum}
-          onClose={() => setEditState(null)}
+          onClose={() => {
+            setEditState(null);
+            handleRefresh();
+          }}
         />
       )}
 
-      {/* --- NUEVO MODAL DE REEMBOLSO --- */}
+      {/* Modal de Reembolso */}
       {reembolsoState && (
         <ReembolsoModal
-          pedido={reembolsoState.pedido}
-          displayNum={reembolsoState.displayNum}
-          onClose={() => setReembolsoState(null)}
+          pedido={reembolsoState}
+          displayNum={numMap[reembolsoState?.id_venta]}
+          onClose={() => {
+            setReembolsoState(null);
+            handleRefresh();
+          }}
         />
       )}
     </div>

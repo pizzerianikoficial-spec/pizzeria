@@ -185,6 +185,29 @@ export const eliminarUsuario = async (req, res) => {
   const { id } = req.params;
 
   try {
+    const userResult = await db.execute({
+      sql: "SELECT id_usuario, rol, estado FROM usuarios WHERE id_usuario = ? LIMIT 1",
+      args: [id],
+    });
+
+    const userRows = userResult.rows || [];
+    if (userRows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "Usuario no encontrado",
+      });
+    }
+
+    const targetUser = userRows[0];
+    const roleNormalized = String(targetUser.rol || "").trim().toLowerCase();
+
+    if (roleNormalized === "admin" || roleNormalized === "administrador") {
+      return res.status(400).json({
+        success: false,
+        message: "Los administradores no pueden ser desactivados del sistema.",
+      });
+    }
+
     const result = await db.execute({
       sql: "UPDATE usuarios SET estado = 'Inactivo' WHERE id_usuario = ?",
       args: [id],

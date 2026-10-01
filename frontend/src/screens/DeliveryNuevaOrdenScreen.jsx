@@ -18,18 +18,16 @@ export default function DeliveryNuevaOrdenScreen() {
   return (
     <div className="flex-1 flex flex-col p-3 gap-4 md:gap-6 sm:p-4 md:p-6 overflow-hidden w-full h-full relative">
       {/* Cabecera y Filtros */}
-      <header className="bg-white border border-slate-200/60 rounded-xl sm:rounded-2xl px-4 py-3 sm:px-5 sm:py-4 md:px-6 md:py-5 flex flex-row flex-nowrap gap-3 sm:gap-4 items-center shadow-sm shrink-0 overflow-hidden">
-        <div className="flex items-center gap-4 shrink-0">
+      <header className="bg-white border border-slate-200/60 rounded-xl sm:rounded-2xl px-4 py-3 sm:px-5 sm:py-4 md:px-6 md:py-5 flex flex-wrap lg:flex-nowrap gap-3 sm:gap-4 justify-between items-center shadow-sm shrink-0">
+        <div className="flex items-center gap-4">
           <div className="w-11 h-11 bg-red-100 text-pizza-red rounded-xl flex items-center justify-center shrink-0">
             <Bike className="w-6 h-6" />
           </div>
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 min-w-0">
-              <h1 className="text-2xl font-black text-slate-800 tracking-tight leading-none truncate">
-                Caja Delivery
-              </h1>
-            </div>
-            <p className="text-xs font-medium text-slate-500 mt-1 capitalize truncate">
+          <div>
+            <h1 className="text-2xl font-black text-slate-800 tracking-tight leading-none">
+              Caja Delivery
+            </h1>
+            <p className="text-xs font-medium text-slate-500 mt-0.5 capitalize">
               {new Date().toLocaleDateString("es-ES", {
                 weekday: "long",
                 day: "numeric",
@@ -40,16 +38,12 @@ export default function DeliveryNuevaOrdenScreen() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0 justify-end">
-          <div className="flex-1 min-w-0 overflow-x-auto [scrollbar-width:thin]">
-            <CategoryFilter
-              selected={selectedCategory}
-              onSelect={setSelectedCategory}
-            />
-          </div>
-          <div className="shrink-0">
-            <PendingNotifications />
-          </div>
+        <div className="flex items-center gap-2 sm:gap-4 w-full lg:w-auto justify-between lg:justify-end">
+          <CategoryFilter
+            selected={selectedCategory}
+            onSelect={setSelectedCategory}
+          />
+          <PendingNotifications />
         </div>
       </header>
 

@@ -15,9 +15,24 @@ import {
   Pencil,
   UserCircle,
   UserCheck,
+  Shield,
 } from "lucide-react";
 
 const ROLE_CONFIG = {
+  admin: {
+    label: "Administrador",
+    color: "bg-purple-500/20 text-purple-700 border-purple-500/30",
+    bgCard: "bg-purple-50/70 border-purple-100/80",
+    iconBg: "bg-purple-500",
+    textColor: "text-purple-500",
+  },
+  administrador: {
+    label: "Administrador",
+    color: "bg-purple-500/20 text-purple-700 border-purple-500/30",
+    bgCard: "bg-purple-50/70 border-purple-100/80",
+    iconBg: "bg-purple-500",
+    textColor: "text-purple-500",
+  },
   cashier: {
     label: "Cajero",
     color: "bg-blue-500/20 text-blue-600 border-blue-500/30",
@@ -53,6 +68,11 @@ const ROLE_CONFIG = {
     iconBg: "bg-blue-500",
     textColor: "text-blue-500",
   },
+};
+
+const isAdminRole = (role) => {
+  const r = String(role || "").trim().toLowerCase();
+  return r === "admin" || r === "administrador";
 };
 
 const ROLES = ["cashier", "chef", "mesero", "despachador", "cashierdelivery"];
@@ -253,7 +273,19 @@ export default function StaffManagement() {
     }
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = (id, userRole) => {
+    if (isAdminRole(userRole)) {
+      if (window.Toast) {
+        window.Toast.fire({
+          icon: "warning",
+          title: "Los administradores no pueden ser desactivados del sistema.",
+        });
+      } else {
+        alert("Los administradores no pueden ser desactivados del sistema.");
+      }
+      return;
+    }
+
     if (window.confirmDelete) {
       window.confirmDelete(async () => {
         setIsDeletingId(id);
@@ -275,10 +307,13 @@ export default function StaffManagement() {
           }
         } catch (error) {
           console.error("Error al inactivar empleado:", error);
+          const errorMsg =
+            error.response?.data?.message ||
+            "Error al intentar inactivar el empleado";
           if (window.Toast) {
             window.Toast.fire({
               icon: "error",
-              title: "Error al intentar inactivar el empleado",
+              title: errorMsg,
             });
           }
         } finally {
@@ -297,6 +332,20 @@ export default function StaffManagement() {
           .then((res) => {
             if (res.data.success) {
               queryClient.invalidateQueries({ queryKey: ["staff"] });
+            }
+          })
+          .catch((error) => {
+            console.error("Error al inactivar empleado:", error);
+            const errorMsg =
+              error.response?.data?.message ||
+              "Error al intentar inactivar el empleado";
+            if (window.Toast) {
+              window.Toast.fire({
+                icon: "error",
+                title: errorMsg,
+              });
+            } else {
+              alert(errorMsg);
             }
           })
           .finally(() => setIsDeletingId(null));
@@ -434,6 +483,7 @@ export default function StaffManagement() {
                 className="bg-slate-50 border border-slate-200 text-slate-800 rounded-xl pl-9 pr-8 py-2 text-sm focus:outline-none focus:border-pizza-red focus:ring-1 focus:ring-pizza-red transition-all shadow-sm w-full lg:w-48 appearance-none"
               >
                 <option value="">Todos los Roles</option>
+                <option value="admin">Administrador</option>
                 {ROLES.map((r) => (
                   <option key={r} value={r}>
                     {ROLE_CONFIG[r].label}
@@ -546,20 +596,29 @@ export default function StaffManagement() {
                               >
                                 <Pencil className="w-4 h-4" />
                               </button>
-                              <button
-                                onClick={() => handleDelete(user.id)}
-                                disabled={isDeletingId === user.id}
-                                className={`p-1.5 rounded-lg transition-all opacity-0 group-hover:opacity-100 duration-150 ${
-                                  isDeletingId === user.id
-                                    ? "text-slate-400 cursor-not-allowed"
-                                    : "text-slate-400 hover:text-pizza-red hover:bg-red-50"
-                                }`}
-                                title="Inactivar Empleado"
-                              >
-                                <Trash2
-                                  className={`w-4 h-4 ${isDeletingId === user.id ? "animate-pulse" : ""}`}
-                                />
-                              </button>
+                              {isAdminRole(user.role) ? (
+                                <span
+                                  className="p-1.5 text-amber-500/80 bg-amber-50 rounded-lg inline-flex items-center cursor-not-allowed opacity-0 group-hover:opacity-100 transition-all duration-150"
+                                  title="Los administradores no pueden ser desactivados del sistema"
+                                >
+                                  <Shield className="w-4 h-4 text-amber-500" />
+                                </span>
+                              ) : (
+                                <button
+                                  onClick={() => handleDelete(user.id, user.role)}
+                                  disabled={isDeletingId === user.id}
+                                  className={`p-1.5 rounded-lg transition-all opacity-0 group-hover:opacity-100 duration-150 ${
+                                    isDeletingId === user.id
+                                      ? "text-slate-400 cursor-not-allowed"
+                                      : "text-slate-400 hover:text-pizza-red hover:bg-red-50"
+                                  }`}
+                                  title="Inactivar Empleado"
+                                >
+                                  <Trash2
+                                    className={`w-4 h-4 ${isDeletingId === user.id ? "animate-pulse" : ""}`}
+                                  />
+                                </button>
+                              )}
                             </>
                           ) : (
                             <button
@@ -672,22 +731,32 @@ export default function StaffManagement() {
                           <Pencil className="w-4 h-4" />
                           Editar
                         </button>
-                        <button
-                          onClick={() => handleDelete(user.id)}
-                          disabled={isDeletingId === user.id}
-                          className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-bold rounded-xl transition-all ${
-                            isDeletingId === user.id
-                              ? "text-slate-400 cursor-not-allowed bg-slate-50"
-                              : "text-red-600 hover:text-red-700 hover:bg-red-50"
-                          }`}
-                        >
-                          <Trash2
-                            className={`w-4 h-4 ${isDeletingId === user.id ? "animate-pulse" : ""}`}
-                          />
-                          {isDeletingId === user.id
-                            ? "Eliminando..."
-                            : "Inactivar"}
-                        </button>
+                        {isAdminRole(user.role) ? (
+                          <div
+                            className="flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-bold text-amber-600 bg-amber-50 border border-amber-200/60 rounded-xl cursor-not-allowed"
+                            title="Los administradores no pueden ser desactivados del sistema"
+                          >
+                            <Shield className="w-4 h-4 text-amber-600" />
+                            Protegido
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => handleDelete(user.id, user.role)}
+                            disabled={isDeletingId === user.id}
+                            className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-bold rounded-xl transition-all ${
+                              isDeletingId === user.id
+                                ? "text-slate-400 cursor-not-allowed bg-slate-50"
+                                : "text-red-600 hover:text-red-700 hover:bg-red-50"
+                            }`}
+                          >
+                            <Trash2
+                              className={`w-4 h-4 ${isDeletingId === user.id ? "animate-pulse" : ""}`}
+                            />
+                            {isDeletingId === user.id
+                              ? "Eliminando..."
+                              : "Inactivar"}
+                          </button>
+                        )}
                       </>
                     ) : (
                       <button
