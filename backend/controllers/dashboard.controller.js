@@ -140,14 +140,25 @@ export const obtenerDashboardStats = async (req, res) => {
          ORDER BY fecha_raw ASC`,
         [startDate, endDate, ...branchParams],
       ),
-      // 7. Estado rápido de órdenes (Pendientes, En cocina, Listas hoy)
       queryRows(
         `SELECT 
-           SUM(CASE WHEN v.estado = 'Pendiente' THEN 1 ELSE 0 END) AS pendientes,
-           SUM(CASE WHEN v.estado IN ('En preparación', 'En cocina', 'Cocinando') THEN 1 ELSE 0 END) AS en_cocina,
-           SUM(CASE WHEN v.estado IN ('Listo', 'Completado') THEN 1 ELSE 0 END) AS completadas
-         FROM ventas v
-         WHERE DATE(v.fecha_hora) = DATE('now', '-4 hours') ${branchCondition}`,
+           COALESCE(SUM(CASE WHEN abiertas > 0 THEN 1 ELSE 0 END), 0) AS pendientes,
+           COALESCE(SUM(CASE WHEN abiertas = 0 AND entregadas > 0 THEN 1 ELSE 0 END), 0) AS en_cocina,
+           COALESCE(SUM(CASE WHEN abiertas = 0 AND entregadas = 0 THEN 1 ELSE 0 END), 0) AS completadas
+         FROM (
+           SELECT
+             v.id_venta,
+             SUM(CASE WHEN vd.estado NOT IN ('Completado','Cerrado','Cancelado','Despacho','Mesero')
+                      THEN 1 ELSE 0 END) AS abiertas,
+             SUM(CASE WHEN vd.estado IN ('Despacho','Mesero')
+                      THEN 1 ELSE 0 END) AS entregadas
+           FROM ventas v
+           JOIN venta_detalle vd ON vd.id_venta = v.id_venta
+           WHERE DATE(v.fecha_hora) = DATE('now', '-4 hours')
+             AND v.estado IN ('Completado', 'Pendiente')
+             ${branchCondition}
+           GROUP BY v.id_venta
+         )`,
         [...branchParams],
       ),
     ]);
