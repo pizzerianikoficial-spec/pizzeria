@@ -1,6 +1,7 @@
 import { useKitchenOrders } from "../../hooks/useKitchenOrders";
 import { OrderCard } from "./OrderCard";
 import { useState } from "react";
+import { ChevronDown } from "lucide-react";
 import Swal from "sweetalert2";
 
 const Toast = Swal.mixin({
@@ -48,10 +49,15 @@ const areOrdersCompatible = (order1, order2) => {
  * Column — columna genérica del board de despacho.
  */
 function Column({ title, icon, countClass, orders, renderCard }) {
+  const [collapsed, setCollapsed] = useState(false);
   return (
-    <div className="flex flex-col flex-1 min-w-0 h-[500px] lg:h-full border-b lg:border-b-0 border-pizza-gray-3">
+    <div
+      className={`flex flex-col flex-none lg:flex-1 min-w-0 lg:h-full border-b lg:border-b-0 border-pizza-gray-3 ${
+        collapsed ? "h-auto" : "h-[500px]"
+      }`}
+    >
       {/* Encabezado */}
-      <div className="flex items-center gap-2.5 px-4 lg:px-6 py-3.5 border-b border-pizza-gray-3 bg-white/95 backdrop-blur-sm sticky top-0 z-10">
+      <div className="flex items-center gap-2.5 px-4 lg:px-6 py-3.5 border-b border-pizza-gray-3 bg-white/95 backdrop-blur-sm sticky top-0 z-10 flex-shrink-0">
         <span className="text-lg 3xl:text-xl">{icon}</span>
         <h2 className="text-pizza-dark font-bold text-base 3xl:text-lg flex-1">
           {title}
@@ -61,18 +67,39 @@ function Column({ title, icon, countClass, orders, renderCard }) {
         >
           {orders.length}
         </span>
+
+        {/* Botón colapsar/expandir: solo visible con columnas apiladas */}
+        <button
+          type="button"
+          onClick={() => setCollapsed((prev) => !prev)}
+          aria-expanded={!collapsed}
+          aria-label={collapsed ? `Expandir ${title}` : `Colapsar ${title}`}
+          className="lg:hidden p-1.5 rounded-md text-pizza-muted hover:bg-pizza-gray-2 active:scale-95 transition-all duration-200"
+        >
+          <ChevronDown
+            className={`w-5 h-5 transition-transform duration-200 ${
+              collapsed ? "-rotate-90" : "rotate-0"
+            }`}
+          />
+        </button>
       </div>
 
       {/* Cards */}
-      <div className="flex-1 overflow-y-auto p-3 lg:p-4 3xl:p-6 flex flex-col gap-3 lg:gap-4 3xl:gap-6 custom-scrollbar">
-        {orders.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full min-h-[150px] text-pizza-muted gap-2">
-            <span className="text-4xl opacity-30">{icon}</span>
-            <p className="text-sm 3xl:text-base opacity-60">Sin pedidos</p>
-          </div>
-        ) : (
-          orders.map((order, idx) => renderCard(order, idx))
-        )}
+      <div
+        className={`${
+          collapsed ? "hidden lg:flex" : "flex"
+        } flex-1 min-h-0 flex-col`}
+      >
+        <div className="flex-1 min-h-0 overflow-y-auto p-3 lg:p-4 3xl:p-6 custom-scrollbar item-start content-start gap-3 lg:flex lg:flex-col lg:items-stretch lg:gap-4 3xl:gap-6 [&>*]:min-w-0">
+          {orders.length === 0 ? (
+            <div className="col-span-2 flex flex-col items-center justify-center w-full h-full min-h-[150px] text-pizza-muted gap-2">
+              <span className="text-4xl opacity-30">{icon}</span>
+              <p className="text-sm 3xl:text-base opacity-60">Sin pedidos</p>
+            </div>
+          ) : (
+            orders.map((order, idx) => renderCard(order, idx))
+          )}
+        </div>
       </div>
     </div>
   );
@@ -135,7 +162,6 @@ export default function DespachoBoard() {
 
   return (
     <div className="flex flex-col lg:flex-row h-full lg:divide-x divide-pizza-gray-3 overflow-y-auto lg:overflow-hidden bg-pizza-gray-2 lg:bg-transparent">
-      {/* ── Columna A: Horno (amarillo) — isFirst lógica ── */}
       {/* ── Columna A: Horno (amarillo) — isFirst lógica ── */}
       <Column
         title="Horno"
