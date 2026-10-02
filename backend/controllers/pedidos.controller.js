@@ -108,8 +108,16 @@ const armarPedidosConExtras = async (ventas, estado) => {
       }),
     );
 
+    const telefonoLimpio =
+      !venta.telefono_cliente ||
+      venta.telefono_cliente === 0 ||
+      venta.telefono_cliente === "0"
+        ? null
+        : venta.telefono_cliente;
+
     return {
       ...venta,
+      telefono_cliente: telefonoLimpio,
       codigo_orden: `ORD-${String(venta.id_venta).padStart(3, "0")}`,
       detalles: detallesVenta,
     };

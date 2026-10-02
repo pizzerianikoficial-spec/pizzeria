@@ -2,13 +2,13 @@ import { useState } from "react";
 import { useApp } from "../../context/AppContext";
 import { Plus, Loader2 } from "lucide-react";
 import { useProducts } from "../../hooks/useProducts";
-import DeliveryCustomerModal from "./DeliveryCustomerModal";
+import OrderTypeModal from "../cajero/OrderTypeModal";
 
 export default function DeliveryMenuGrid({ category }) {
   const { addToCart, currentOrder, setOrderType } = useApp();
   const { data: catalog, isLoading } = useProducts();
 
-  const [showCustomerModal, setShowCustomerModal] = useState(false);
+  const [showOrderTypeModal, setShowOrderTypeModal] = useState(false);
   const [pendingProduct, setPendingProduct] = useState(null);
 
   const products = [
@@ -19,10 +19,10 @@ export default function DeliveryMenuGrid({ category }) {
   ];
 
   const handleAddToCart = (product, size) => {
-    // Si el carrito está vacío y aún no se seleccionó cliente, solicitar datos del cliente con el mismo diseño de caja principal
-    if (currentOrder.items.length === 0 && !currentOrder.customer) {
+    // Si el carrito está vacío y aún no se configuró el pedido (cliente, delivery, estado de pago), abrir OrderTypeModal
+    if (currentOrder.items.length === 0 && (!currentOrder.orderType || !currentOrder.customer)) {
       setPendingProduct({ product, size });
-      setShowCustomerModal(true);
+      setShowOrderTypeModal(true);
     } else {
       if (currentOrder.orderType !== "delivery") {
         setOrderType("delivery");
@@ -31,16 +31,16 @@ export default function DeliveryMenuGrid({ category }) {
     }
   };
 
-  const handleCustomerConfirmed = () => {
-    setShowCustomerModal(false);
-    if (pendingProduct) {
+  const handleOrderTypeConfirmed = ({ pendingRegistered = false } = {}) => {
+    setShowOrderTypeModal(false);
+    if (pendingProduct && !pendingRegistered) {
       addToCart(pendingProduct.product, pendingProduct.size);
     }
     setPendingProduct(null);
   };
 
-  const handleCustomerClose = () => {
-    setShowCustomerModal(false);
+  const handleOrderTypeClose = () => {
+    setShowOrderTypeModal(false);
     setPendingProduct(null);
   };
 
@@ -158,11 +158,13 @@ export default function DeliveryMenuGrid({ category }) {
         </div>
       )}
 
-      {showCustomerModal && (
-        <DeliveryCustomerModal
-          onConfirm={handleCustomerConfirmed}
-          onClose={handleCustomerClose}
+      {showOrderTypeModal && (
+        <OrderTypeModal
+          onConfirm={handleOrderTypeConfirmed}
+          onClose={handleOrderTypeClose}
           pendingProduct={pendingProduct}
+          initialType="delivery"
+          lockType={true}
         />
       )}
     </div>

@@ -31,6 +31,16 @@ export const procesarVenta = async (req, res) => {
   const { id_sucursal } = req.user;
   const finalUserId = id_usuario || req.user?.id || 1;
 
+  const deliveryId =
+    typeof id_delivery === "object" && id_delivery !== null
+      ? Number(id_delivery.id ?? id_delivery.id_delivery) || null
+      : Number(id_delivery) || null;
+
+  const clienteId =
+    typeof id_cliente === "object" && id_cliente !== null
+      ? Number(id_cliente.id ?? id_cliente.id_cliente) || 1
+      : Number(id_cliente) || 1;
+
   if (!Array.isArray(detalles) || !validarDetallesNuevos(detalles)) {
     return res.status(400).json({
       success: false,
@@ -48,9 +58,9 @@ export const procesarVenta = async (req, res) => {
       (id_cliente, id_usuario, id_delivery, despacho, estado, fecha_hora, tasa_cambio, monto_total_usd, monto_total_bs, cantidad_caja, id_sucursal) 
       VALUES (?, ?, ?, ?, 'Completado', datetime('now', '-4 hours'), ?, ?, ?, ?, ?)`,
       args: [
-        id_cliente,
+        clienteId,
         finalUserId,
-        id_delivery || null,
+        deliveryId,
         despacho,
         tasa_cambio,
         monto_total_usd,
@@ -185,6 +195,16 @@ export const registrarPedidoPendiente = async (req, res) => {
 
   let tx;
 
+  const deliveryId =
+    typeof id_delivery === "object" && id_delivery !== null
+      ? Number(id_delivery.id ?? id_delivery.id_delivery) || null
+      : Number(id_delivery) || null;
+
+  const clienteId =
+    typeof id_cliente === "object" && id_cliente !== null
+      ? Number(id_cliente.id ?? id_cliente.id_cliente) || 1
+      : Number(id_cliente) || 1;
+
   try {
     tx = await db.transaction("write");
 
@@ -193,9 +213,9 @@ export const registrarPedidoPendiente = async (req, res) => {
        (id_cliente, id_usuario, id_delivery, despacho, estado, fecha_hora, tasa_cambio, monto_total_usd, monto_total_bs, cantidad_caja, id_sucursal)
       VALUES (?, ?, ?, ?, 'Pendiente', datetime('now', '-4 hours'), ?, ?, ?, ?, ?)`,
       args: [
-        id_cliente,
+        clienteId,
         id_usuario,
-        id_delivery || null,
+        deliveryId,
         despacho,
         tasa_cambio || 0,
         monto_total_usd || 0,
@@ -940,7 +960,14 @@ export const obtenerPedidosActivos = async (req, res) => {
           extras: extrasPorDetalle.get(det.id_detalle) || [],
         }),
       );
-      return { ...venta, detalles };
+      const telefonoLimpio =
+        !venta.telefono_cliente ||
+        venta.telefono_cliente === 0 ||
+        venta.telefono_cliente === "0"
+          ? null
+          : venta.telefono_cliente;
+
+      return { ...venta, telefono_cliente: telefonoLimpio, detalles };
     });
 
     res.json({ success: true, data: pedidos });

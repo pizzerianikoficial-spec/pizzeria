@@ -14,6 +14,7 @@ import {
   ChevronRight,
   MessageSquare,
   Undo2,
+  Phone,
 } from "lucide-react";
 import OrderEditModal from "../components/cajero/OrderEditModal";
 import ReembolsoModal from "../components/cajero/ReembolsoModal";
@@ -393,13 +394,14 @@ export default function ColaTrabajoScreen() {
                               <span className="font-bold text-slate-800 text-xs sm:text-sm truncate">
                                 {pedido.nombre_cliente || "Sin cliente"}
                               </span>
-                              {pedido.cedula_cliente && (
+                              {Boolean(pedido.cedula_cliente && String(pedido.cedula_cliente) !== "0") && (
                                 <span className="text-[11px] text-slate-500 font-medium">
                                   V-{pedido.cedula_cliente}
                                 </span>
                               )}
-                              {pedido.telefono_cliente && (
-                                <span className="text-[11px] text-slate-500 font-medium">
+                              {Boolean(pedido.telefono_cliente && String(pedido.telefono_cliente) !== "0") && (
+                                <span className="text-[11px] text-slate-500 font-medium flex items-center gap-1">
+                                  <Phone className="w-3 h-3 text-slate-400 shrink-0" />
                                   {pedido.telefono_cliente}
                                 </span>
                               )}
@@ -602,13 +604,14 @@ export default function ColaTrabajoScreen() {
                           <p className="font-bold text-slate-800 text-sm truncate">
                             {pedido.nombre_cliente || "Sin cliente"}
                           </p>
-                          {pedido.cedula_cliente && (
+                          {Boolean(pedido.cedula_cliente && String(pedido.cedula_cliente) !== "0") && (
                             <p className="text-xs text-slate-500 font-medium mt-0.5">
                               V-{pedido.cedula_cliente}
                             </p>
                           )}
-                          {pedido.telefono_cliente && (
-                            <p className="text-xs text-slate-500 font-medium mt-0.5">
+                          {Boolean(pedido.telefono_cliente && String(pedido.telefono_cliente) !== "0") && (
+                            <p className="text-xs text-slate-500 font-medium flex items-center gap-1 mt-0.5">
+                              <Phone className="w-3 h-3 text-slate-400 shrink-0" />
                               {pedido.telefono_cliente}
                             </p>
                           )}

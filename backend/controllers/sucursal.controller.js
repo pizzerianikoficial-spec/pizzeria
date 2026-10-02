@@ -33,11 +33,15 @@ export const registrarSucursal = async (req, res) => {
       args: [nameTrim, direccionTrim, estadoActivo],
     });
 
+    const newSucursalId = Number(
+      sucursalCreada.lastInsertRowid || sucursalCreada.insertId,
+    );
+
     res.status(201).json({
       success: true,
       message: "La sucursal ha sido creada exitosamente!",
       sucursal: {
-        id_sucursal: sucursalCreada.insertId,
+        id_sucursal: newSucursalId,
         sucursal: nameTrim,
         direccion: direccionTrim,
         estado: estadoActivo,

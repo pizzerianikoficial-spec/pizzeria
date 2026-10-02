@@ -48,7 +48,7 @@ export const registrarDelivery = async (req, res) => {
       return res.json({
         success: true,
         created: false,
-        delivery: existing[0],
+        delivery: existing.rows[0],
       });
     }
 
@@ -58,12 +58,15 @@ export const registrarDelivery = async (req, res) => {
       args: [digits, deliveryName],
     });
 
+    const newDeliveryId = Number(result.lastInsertRowid || result.insertId);
+
     res.status(201).json({
       success: true,
       message: "Delivery registrado con éxito",
       created: true,
       delivery: {
-        id: result.insertId,
+        id: newDeliveryId,
+        id_delivery: newDeliveryId,
         name: deliveryName,
         phone: digits,
       },
@@ -137,11 +140,13 @@ export const registrarUsuario = async (req, res) => {
       ],
     });
 
+    const newUserId = Number(result.lastInsertRowid || result.insertId);
+
     res.status(201).json({
       success: true,
       message: "Usuario registrado correctamente.",
       usuario: {
-        id_usuario: result.insertId,
+        id_usuario: newUserId,
         nombre_completo: nameTrim,
         email: emailTrim,
         id_sucursal: Number(id_sucursal),

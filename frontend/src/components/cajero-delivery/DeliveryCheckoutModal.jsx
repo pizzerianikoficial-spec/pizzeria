@@ -100,7 +100,17 @@ export default function DeliveryCheckoutModal({ onClose }) {
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const totalToUse = total;
+  const isPendingSale = Boolean(currentOrder.pendingSaleId);
+  const pendingOriginalTotal = currentOrder.pendingOriginalTotal ?? total;
+  const pendingAddedTotal = currentOrder.items
+    .filter((item) => !item.isPendingExisting)
+    .reduce(
+      (sum, item) => sum + Number(item.price || 0) * Number(item.qty || 0),
+      0,
+    );
+  const totalToUse = isPendingSale
+    ? pendingOriginalTotal + pendingAddedTotal
+    : total;
   const paidSoFar = paymentsInternal.reduce((s, p) => s + p.amount, 0);
   const remainingLocalUSD = Math.max(0, totalToUse - paidSoFar);
 
@@ -214,16 +224,25 @@ export default function DeliveryCheckoutModal({ onClose }) {
       return;
     }
 
-    const clienteIdReal = currentOrder.customer?.id
-      ? currentOrder.customer.id
-      : 1;
+    const normalizeId = (value) => {
+      if (!value) return null;
+      const candidate =
+        typeof value === "object"
+          ? (value.id ?? value.id_delivery ?? value.id_cliente)
+          : value;
+      const numeric = Number(candidate);
+      return Number.isInteger(numeric) && numeric > 0 ? numeric : null;
+    };
+
+    const deliveryIdReal = normalizeId(currentOrder.deliveryId);
+    const clienteIdReal = normalizeId(currentOrder.customer) || 1;
 
     let payload;
     try {
       payload = {
         id_cliente: clienteIdReal,
         id_usuario: currentUser?.id || 1,
-        id_delivery: currentOrder.deliveryId || null,
+        id_delivery: deliveryIdReal,
         despacho: "Delivery",
         tasa_cambio: Number((exchangeRate || 0).toFixed(2)),
         monto_total_usd: Number(totalToUse.toFixed(2)),
@@ -234,15 +253,30 @@ export default function DeliveryCheckoutModal({ onClose }) {
         monto_cajas_bs: Number(
           (boxesTotalUSD * (exchangeRate || 0)).toFixed(2),
         ),
-        pagos: paymentsInternal.map((payment) => ({
-          metodo: mapPaymentMethodToApi(payment.method),
-          monto_usd: Number(payment.amount.toFixed(2)),
-          monto_bs: Number((payment.amount * (exchangeRate || 0)).toFixed(2)),
-          referencia: payment.reference || payment.currency,
-        })),
+        pagos: paymentsInternal.map((payment) => {
+          const isUSD = payment.currency === "USD";
+          const isBs = payment.currency === "Bs";
+          const isCash = mapPaymentMethodToApi(payment.method) === "Efectivo";
+
+          return {
+            metodo: mapPaymentMethodToApi(payment.method),
+            monto_usd: isCash
+              ? isUSD
+                ? Number(payment.amount.toFixed(2))
+                : 0
+              : Number(payment.amount.toFixed(2)),
+            monto_bs: isCash
+              ? isBs
+                ? Number((payment.amount * (exchangeRate || 0)).toFixed(2))
+                : 0
+              : Number((payment.amount * (exchangeRate || 0)).toFixed(2)),
+            referencia: payment.reference || payment.currency || "Bs",
+          };
+        }),
         detalles: currentOrder.items
           .filter((item) => !isBoxItem(item))
           .map((item) => ({
+            id_detalle: item.id_detalle || null,
             tipo_producto: getProductTypeForApi(item.category),
             id_producto_origen: getProductOriginId(item),
             cantidad: Number(item.qty || 1),
@@ -250,7 +284,13 @@ export default function DeliveryCheckoutModal({ onClose }) {
               (Number(item.price || 0) * Number(item.qty || 1)).toFixed(2),
             ),
             nota: item.note || "",
-            extras: (item.extras || []).map((extra) => Number(extra.id)),
+            extras: item.extras
+              ? item.extras.map((extra) =>
+                  typeof extra.id === "string"
+                    ? parseInt(extra.id.replace(/\D/g, ""), 10)
+                    : Number(extra.id),
+                )
+              : [],
           })),
       };
     } catch (validationError) {
@@ -260,17 +300,49 @@ export default function DeliveryCheckoutModal({ onClose }) {
 
     setIsSubmitting(true);
     try {
+      const endpoint = isPendingSale
+        ? `${API_BASE}/completar-venta-pendiente/${currentOrder.pendingSaleId}`
+        : `${API_BASE}/procesar-venta`;
+
+      const requestPayload = isPendingSale
+        ? {
+            id_usuario: currentUser?.id || 1,
+            monto_total_usd: Number(
+              (pendingOriginalTotal + pendingAddedTotal).toFixed(2),
+            ),
+            monto_total_bs: Number(
+              (
+                (pendingOriginalTotal + pendingAddedTotal) *
+                (exchangeRate || 0)
+              ).toFixed(2),
+            ),
+            detalles: payload.detalles,
+            cantidad_cajas: payload.cantidad_cajas,
+            precio_caja_usd: payload.precio_caja_usd,
+            monto_cajas_usd: payload.monto_cajas_usd,
+            monto_cajas_bs: payload.monto_cajas_bs,
+            pagos: payload.pagos.slice(currentOrder.payments?.length || 0),
+          }
+        : payload;
+
       const response = await axios.post(
-        `${API_BASE}/procesar-venta`,
-        payload,
+        endpoint,
+        requestPayload,
         { withCredentials: true },
       );
 
       if (response.data?.success) {
+        if (isPendingSale) {
+          queryClient.invalidateQueries({
+            queryKey: ["notificaciones-pendientes"],
+          });
+        }
         Swal.fire({
           icon: "success",
-          title: "¡Orden Creada!",
-          text: "La orden delivery ha sido registrada y enviada a cocina exitosamente.",
+          title: isPendingSale ? "¡Venta Completada!" : "¡Orden Creada!",
+          text: isPendingSale
+            ? "El pago pendiente ha sido liquidado exitosamente."
+            : "La orden delivery ha sido registrada y enviada a cocina exitosamente.",
           confirmButtonColor: "#EA2A33",
           confirmButtonText: "Aceptar",
           timer: 2500,

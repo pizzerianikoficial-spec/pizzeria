@@ -324,7 +324,10 @@ function reducer(state, action) {
           advanceCurrency: advanceCurrency || "USD",
           customer: customer || null,
           phoneLastDigits: phoneLastDigits || "",
-          deliveryId: deliveryId || null,
+          deliveryId:
+            typeof deliveryId === "object" && deliveryId !== null
+              ? deliveryId.id ?? deliveryId.id_delivery ?? null
+              : Number(deliveryId) || null,
         },
       };
     }

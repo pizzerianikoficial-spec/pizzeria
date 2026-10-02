@@ -1,6 +1,7 @@
 import { API_BASE } from "../../config/api";
 import { useState, useRef, useEffect } from "react";
-import axios from "axios"; // <-- Importación de axios agregada
+import axios from "axios";
+import Swal from "sweetalert2";
 import { useApp } from "../../context/AppContext";
 import { useExchangeRate } from "../../hooks/useExchangeRate";
 import PaymentEntryModal from "./PaymentEntryModal";
@@ -133,7 +134,13 @@ const PAYMENT_METHODS = [
 ];
 
 // ─── Componente principal ─────────────────────────────────────────────────────
-export default function OrderTypeModal({ onConfirm, onClose, pendingProduct }) {
+export default function OrderTypeModal({
+  onConfirm,
+  onClose,
+  pendingProduct,
+  initialType = null,
+  lockType = false,
+}) {
   const {
     setOrderType,
     addCustomer,
@@ -148,7 +155,7 @@ export default function OrderTypeModal({ onConfirm, onClose, pendingProduct }) {
   const [step, setStep] = useState(1);
 
   // Paso 1 - Tipo de pedido y Estado de Pago
-  const [selectedType, setSelectedType] = useState(null);
+  const [selectedType, setSelectedType] = useState(initialType || null);
   const [paymentStatus, setPaymentStatus] = useState(null);
   const [advanceCurrency, setAdvanceCurrency] = useState("USD");
   const [advanceAmount, setAdvanceAmount] = useState("");
@@ -407,11 +414,13 @@ export default function OrderTypeModal({ onConfirm, onClose, pendingProduct }) {
     const response = await axios.post(
       `${API_BASE}/registrar-pedido-pendiente`,
       {
-        id_cliente: finalCustomer?.id ?? finalCustomer?.id_cliente ?? 1,
+        id_cliente: Number(
+          finalCustomer?.id ?? finalCustomer?.id_cliente ?? 1,
+        ),
         id_usuario: currentUser?.id || 1,
         id_delivery:
           selectedType === "delivery"
-            ? (finalDelivery?.id ?? finalDelivery?.id_delivery)
+            ? Number(finalDelivery?.id ?? finalDelivery?.id_delivery) || null
             : null,
         despacho,
         tasa_cambio: Number((exchangeRate || 0).toFixed(2)),
@@ -473,7 +482,7 @@ export default function OrderTypeModal({ onConfirm, onClose, pendingProduct }) {
           },
         );
 
-        if (dataDelivery.success) {
+        if (dataDelivery.success && dataDelivery.delivery) {
           finalDelivery = dataDelivery.delivery;
         }
       } catch (error) {
@@ -536,6 +545,19 @@ export default function OrderTypeModal({ onConfirm, onClose, pendingProduct }) {
     if (shouldRegisterPending) {
       try {
         await registerPendingOrder(finalCustomer, finalDelivery);
+        Swal.fire({
+          icon: "success",
+          title: "¡Pedido Pendiente Registrado!",
+          text: "El pedido fue enviado a cocina y quedó registrado en pagos pendientes.",
+          confirmButtonColor: "#EA2A33",
+          timer: 2500,
+          timerProgressBar: true,
+          customClass: {
+            popup: "rounded-2xl font-sans shadow-2xl border border-slate-100",
+            title: "text-lg font-black text-slate-800",
+            confirmButton: "px-6 py-2.5 font-bold rounded-xl text-sm",
+          },
+        });
         clearCart();
         onConfirm?.({ pendingRegistered: true });
       } catch (error) {
@@ -548,24 +570,24 @@ export default function OrderTypeModal({ onConfirm, onClose, pendingProduct }) {
     }
 
     // 3. Setear el tipo de pedido en el estado global
+    const finalDeliveryId = finalDelivery
+      ? Number(finalDelivery.id ?? finalDelivery.id_delivery) || null
+      : null;
+
     setOrderType(
       selectedType,
       needsPaymentInfo ? paymentStatus : null,
       paymentStatus === "partial" ? advanceUSD : 0,
       finalCustomer
         ? {
-            id: finalCustomer.id, // Verifica que tu JSON de respuesta devuelva "id" y no "id_cliente"
+            id: Number(finalCustomer.id ?? finalCustomer.id_cliente),
             name: finalCustomer.name,
             cedula: finalCustomer.cedula,
             phone: finalCustomer.phone,
           }
         : null,
       needsPaymentInfo ? deliveryDigits : "",
-      finalDelivery
-        ? {
-            id: finalDelivery.id ?? finalDelivery.id_delivery,
-          }
-        : null,
+      finalDeliveryId,
       paymentStatus === "partial" ? advancePaymentMethod?.id : null,
       paymentStatus === "partial" ? advanceCurrency : "USD",
     );
@@ -708,48 +730,69 @@ export default function OrderTypeModal({ onConfirm, onClose, pendingProduct }) {
             {step === 1 && (
               <div className="flex flex-col gap-5 animate-fade-in">
                 {/* Opciones de tipo de pedido */}
-                <div className="grid grid-cols-2 gap-2 sm:gap-3">
-                  {ORDER_TYPES.map((type) => {
-                    const Icon = type.icon;
-                    const isSelected = selectedType === type.id;
-                    return (
-                      <button
-                        key={type.id}
-                        onClick={() => handleTypeSelect(type.id)}
-                        className={`relative flex flex-col items-center justify-center gap-2 sm:gap-3 p-3 sm:p-4 md:p-5 rounded-xl sm:rounded-2xl border-2 transition-all duration-200 active:scale-[0.97] cursor-pointer ${
-                          isSelected
-                            ? `${type.colorSelected} shadow-lg`
-                            : `${type.colorLight} hover:shadow-md`
-                        }`}
-                      >
-                        {isSelected && (
-                          <span className="absolute top-2.5 right-2.5">
-                            <CheckCircle2 className="w-4 h-4 text-white drop-shadow" />
-                          </span>
-                        )}
-                        <div
-                          className={`w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-sm ${isSelected ? "bg-white/20" : "bg-white"}`}
+                {lockType ? (
+                  <div className="flex items-center gap-3 p-3.5 bg-red-50 border-2 border-red-200 rounded-2xl animate-fade-in">
+                    <div className="w-11 h-11 rounded-xl bg-pizza-red flex items-center justify-center text-white shadow-sm shrink-0">
+                      <Bike className="w-6 h-6" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-extrabold text-base text-slate-800">
+                          Pedido Delivery
+                        </span>
+                        <span className="bg-red-100 text-pizza-red text-[10px] font-bold px-2 py-0.5 rounded-full border border-red-200">
+                          Caja Delivery
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        Indica los datos del repartidor y el estado del pago
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                    {ORDER_TYPES.map((type) => {
+                      const Icon = type.icon;
+                      const isSelected = selectedType === type.id;
+                      return (
+                        <button
+                          key={type.id}
+                          onClick={() => handleTypeSelect(type.id)}
+                          className={`relative flex flex-col items-center justify-center gap-2 sm:gap-3 p-3 sm:p-4 md:p-5 rounded-xl sm:rounded-2xl border-2 transition-all duration-200 active:scale-[0.97] cursor-pointer ${
+                            isSelected
+                              ? `${type.colorSelected} shadow-lg`
+                              : `${type.colorLight} hover:shadow-md`
+                          }`}
                         >
-                          <Icon
-                            className={`w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 ${isSelected ? "text-white" : type.colorIcon}`}
-                          />
-                        </div>
-                        <div className="text-center">
-                          <p
-                            className={`font-extrabold text-base ${isSelected ? "text-white" : "text-slate-800"}`}
+                          {isSelected && (
+                            <span className="absolute top-2.5 right-2.5">
+                              <CheckCircle2 className="w-4 h-4 text-white drop-shadow" />
+                            </span>
+                          )}
+                          <div
+                            className={`w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-sm ${isSelected ? "bg-white/20" : "bg-white"}`}
                           >
-                            {type.label}
-                          </p>
-                          <p
-                            className={`text-xs mt-0.5 ${isSelected ? "text-white/80" : "text-slate-500"}`}
-                          >
-                            {type.sublabel}
-                          </p>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
+                            <Icon
+                              className={`w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 ${isSelected ? "text-white" : type.colorIcon}`}
+                            />
+                          </div>
+                          <div className="text-center">
+                            <p
+                              className={`font-extrabold text-base ${isSelected ? "text-white" : "text-slate-800"}`}
+                            >
+                              {type.label}
+                            </p>
+                            <p
+                              className={`text-xs mt-0.5 ${isSelected ? "text-white/80" : "text-slate-500"}`}
+                            >
+                              {type.sublabel}
+                            </p>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
 
                 {/* Datos del Delivery o Pickup (Últimos 4 dígitos) */}
                 {needsDeliveryDigits && (

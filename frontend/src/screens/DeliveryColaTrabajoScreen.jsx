@@ -450,7 +450,7 @@ export default function DeliveryColaTrabajoScreen() {
                               <span className="font-bold text-slate-800 text-xs sm:text-sm truncate">
                                 {pedido.nombre_cliente || "Cliente Delivery"}
                               </span>
-                              {pedido.telefono_cliente && (
+                              {Boolean(pedido.telefono_cliente && String(pedido.telefono_cliente) !== "0") && (
                                 <span className="text-[11px] text-slate-500 font-medium flex items-center gap-1">
                                   <Phone className="w-3 h-3 text-slate-400 shrink-0" />
                                   {pedido.telefono_cliente}
@@ -654,7 +654,7 @@ export default function DeliveryColaTrabajoScreen() {
                           <p className="font-bold text-slate-800 text-sm truncate">
                             {pedido.nombre_cliente || "Cliente Delivery"}
                           </p>
-                          {pedido.telefono_cliente && (
+                          {Boolean(pedido.telefono_cliente && String(pedido.telefono_cliente) !== "0") && (
                             <p className="text-xs text-slate-500 font-medium flex items-center gap-1 mt-0.5">
                               <Phone className="w-3 h-3 text-slate-400 shrink-0" />
                               {pedido.telefono_cliente}
