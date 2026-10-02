@@ -181,7 +181,7 @@ const PAGO_ICONS = {
     icon: Smartphone,
     cls: "text-violet-600 bg-violet-50 border-violet-100",
   },
-  "Cashea": {
+  Cashea: {
     icon: Wallet,
     cls: "text-pink-600 bg-pink-50 border-pink-100",
   },
@@ -433,7 +433,7 @@ export default function Reportes() {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-[8px] sm:text-[9px] font-extrabold text-emerald-500 uppercase tracking-wider whitespace-nowrap">
-                  {modulo === "heladeria" ? "Total Helados" : "Total USD"}
+                  {modulo === "heladeria" ? "Total USD" : "Total USD"}
                 </p>
                 <p className="text-slate-800 text-2xl font-black leading-none mt-1">
                   {loading ? "—" : fmtUSD(resumen?.total_usd ?? 0)}
