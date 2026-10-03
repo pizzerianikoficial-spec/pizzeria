@@ -67,15 +67,6 @@ const ORDER_TYPES = [
     colorSelected: "bg-emerald-500 border-emerald-500",
     colorIcon: "text-emerald-500",
   },
-  {
-    id: "paid_hold",
-    label: "Pagado en espera",
-    sublabel: "Cobrado, después va al horno",
-    icon: Flame,
-    colorLight: "bg-orange-50 border-orange-200",
-    colorSelected: "bg-orange-500 border-orange-500",
-    colorIcon: "text-orange-500",
-  },
 ];
 
 const PAYMENT_STATUS_OPTIONS = [
@@ -102,6 +93,15 @@ const PAYMENT_STATUS_OPTIONS = [
     color: "text-amber-600",
     bg: "bg-amber-50 border-amber-300",
     selectedBg: "bg-amber-500 border-amber-500",
+  },
+  {
+    id: "paid_hold",
+    label: "Pagado en espera",
+    sublabel: "Mandar al horno después",
+    icon: Flame,
+    color: "text-orange-600",
+    bg: "bg-orange-50 border-orange-300",
+    selectedBg: "bg-orange-500 border-orange-500",
   },
 ];
 
@@ -191,8 +191,7 @@ export default function OrderTypeModal({
     selectedType === "local" ||
     selectedType === "takeaway" ||
     selectedType === "delivery" ||
-    selectedType === "pickup" ||
-    selectedType === "paid_hold";
+    selectedType === "pickup";
   const skipsCustomerStep = !needsCustomerStep;
   const advanceRaw = parseFloat(advanceAmount) || 0;
   const advanceUSD =
@@ -938,11 +937,18 @@ export default function OrderTypeModal({
                             <Icon
                               className={`w-5 h-5 shrink-0 ${isSelected ? "text-white" : opt.color}`}
                             />
-                            <span
-                              className={`font-semibold text-sm flex-1 text-left ${isSelected ? "text-white" : "text-slate-700"}`}
+                            <div
+                              className={`flex flex-col flex-1 text-left ${isSelected ? "text-white" : "text-slate-700"}`}
                             >
-                              {opt.label}
-                            </span>
+                              <span className="font-semibold text-sm">{opt.label}</span>
+                              {opt.sublabel && (
+                                <span
+                                  className={`text-xs mt-0.5 ${isSelected ? "text-white/80" : "text-slate-500"}`}
+                                >
+                                  {opt.sublabel}
+                                </span>
+                              )}
+                            </div>
                             {isSelected && (
                               <CheckCircle2 className="w-4 h-4 text-white shrink-0" />
                             )}

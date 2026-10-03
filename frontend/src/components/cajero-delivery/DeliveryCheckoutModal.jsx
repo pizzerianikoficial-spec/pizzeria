@@ -102,7 +102,7 @@ export default function DeliveryCheckoutModal({ onClose }) {
 
   const isPendingSale = Boolean(currentOrder.pendingSaleId);
   // Venta ya cobrada pero retenida: no entra a cocina hasta "Mandar al horno"
-  const isPaidHold = ctxOrderType === "paid_hold";
+  const isPaidHold = ctxPaymentStatus === "paid_hold";
   const pendingOriginalTotal = currentOrder.pendingOriginalTotal ?? total;
   const pendingAddedTotal = currentOrder.items
     .filter((item) => !item.isPendingExisting)

@@ -70,7 +70,8 @@ export default function CheckoutModal({ onClose }) {
   const ctxAdvanceCurrency = currentOrder.advanceCurrency || "USD";
   const isPendingSale = Boolean(currentOrder.pendingSaleId);
   // Venta ya cobrada pero retenida: no entra a cocina hasta "Mandar al horno"
-  const isPaidHold = orderType === "paid_hold";
+  // paid_hold es un ESTADO DE PAGO, no un tipo de despacho
+  const isPaidHold = ctxPaymentStatus === "paid_hold";
   const pendingOriginalTotal = currentOrder.pendingOriginalTotal ?? total;
   const pendingAddedTotal = currentOrder.items
     .filter((item) => !item.isPendingExisting)
@@ -99,7 +100,6 @@ export default function CheckoutModal({ onClose }) {
     takeaway: "Para Llevar",
     delivery: "Delivery",
     pickup: "Pickup",
-    paid_hold: "Pagado en espera",
     // backward compat
     dine_in: "Local",
     delivery_call: "Delivery (Llamada)",
@@ -202,8 +202,6 @@ export default function CheckoutModal({ onClose }) {
         return "Delivery";
       case "pickup":
         return "Pick Up";
-      case "paid_hold":
-        return "Local";
       default:
         return null;
     }
