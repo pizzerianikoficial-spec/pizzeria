@@ -26,6 +26,7 @@ import {
   Banknote,
   Coins,
   Wallet,
+  Flame,
 } from "lucide-react";
 
 // ─── Configuración estática ───────────────────────────────────────────────────
@@ -65,6 +66,15 @@ const ORDER_TYPES = [
     colorLight: "bg-emerald-50 border-emerald-200",
     colorSelected: "bg-emerald-500 border-emerald-500",
     colorIcon: "text-emerald-500",
+  },
+  {
+    id: "paid_hold",
+    label: "Pagado en espera",
+    sublabel: "Cobrado, después va al horno",
+    icon: Flame,
+    colorLight: "bg-orange-50 border-orange-200",
+    colorSelected: "bg-orange-500 border-orange-500",
+    colorIcon: "text-orange-500",
   },
 ];
 
@@ -181,7 +191,8 @@ export default function OrderTypeModal({
     selectedType === "local" ||
     selectedType === "takeaway" ||
     selectedType === "delivery" ||
-    selectedType === "pickup";
+    selectedType === "pickup" ||
+    selectedType === "paid_hold";
   const skipsCustomerStep = !needsCustomerStep;
   const advanceRaw = parseFloat(advanceAmount) || 0;
   const advanceUSD =

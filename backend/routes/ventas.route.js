@@ -1,6 +1,7 @@
 import { Router } from "express";
 import {
   procesarVenta,
+  registrarVentaPagadaEnEspera,
   registrarPedidoPendiente,
   completarVentaPendiente,
   editarVenta,
@@ -21,6 +22,11 @@ import esAdmin from "../middleware/esAdmin.js";
 const router = Router();
 
 router.post("/procesar-venta", verificarToken, procesarVenta);
+router.post(
+  "/registrar-venta-pagada-en-espera",
+  verificarToken,
+  registrarVentaPagadaEnEspera,
+);
 router.post(
   "/registrar-pedido-pendiente",
   verificarToken,

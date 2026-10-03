@@ -69,6 +69,8 @@ export default function CheckoutModal({ onClose }) {
   const ctxAdvancePaymentMethod = currentOrder.advancePaymentMethod;
   const ctxAdvanceCurrency = currentOrder.advanceCurrency || "USD";
   const isPendingSale = Boolean(currentOrder.pendingSaleId);
+  // Venta ya cobrada pero retenida: no entra a cocina hasta "Mandar al horno"
+  const isPaidHold = orderType === "paid_hold";
   const pendingOriginalTotal = currentOrder.pendingOriginalTotal ?? total;
   const pendingAddedTotal = currentOrder.items
     .filter((item) => !item.isPendingExisting)
@@ -97,6 +99,7 @@ export default function CheckoutModal({ onClose }) {
     takeaway: "Para Llevar",
     delivery: "Delivery",
     pickup: "Pickup",
+    paid_hold: "Pagado en espera",
     // backward compat
     dine_in: "Local",
     delivery_call: "Delivery (Llamada)",
@@ -199,6 +202,8 @@ export default function CheckoutModal({ onClose }) {
         return "Delivery";
       case "pickup":
         return "Pick Up";
+      case "paid_hold":
+        return "Local";
       default:
         return null;
     }
@@ -433,7 +438,9 @@ export default function CheckoutModal({ onClose }) {
     try {
       const endpoint = isPendingSale
         ? `${API_BASE}/completar-venta-pendiente/${currentOrder.pendingSaleId}`
-        : `${API_BASE}/procesar-venta`;
+        : isPaidHold
+          ? `${API_BASE}/registrar-venta-pagada-en-espera`
+          : `${API_BASE}/procesar-venta`;
       const requestPayload = isPendingSale
         ? {
             id_usuario: currentUser?.id || 1,
@@ -487,14 +494,27 @@ export default function CheckoutModal({ onClose }) {
       clearCart();
       onClose();
       // Refrescar cola y métricas sin recargar página
-      queryClient.invalidateQueries({ queryKey: ["pedidosActivos"] });
       queryClient.invalidateQueries({ queryKey: ["ventasHoy"] });
-      queryClient.invalidateQueries({ queryKey: ["contadorCajero"] });
-      queryClient.invalidateQueries({ queryKey: ["entregas"] });
+      if (isPaidHold) {
+        // La venta no fue a cocina: solo aparece en la campana de la espera
+        queryClient.invalidateQueries({
+          queryKey: ["notificaciones-pendientes"],
+        });
+        queryClient.invalidateQueries({ queryKey: ["pedidosActivos"] });
+      } else {
+        queryClient.invalidateQueries({ queryKey: ["pedidosActivos"] });
+        queryClient.invalidateQueries({ queryKey: ["contadorCajero"] });
+        queryClient.invalidateQueries({ queryKey: ["entregas"] });
+      }
 
       window.Toast.fire({
         icon: "success",
-        title: "¡Venta procesada exitosamente!",
+        title: isPaidHold
+          ? "¡Venta registrada en espera!"
+          : "¡Venta procesada exitosamente!",
+        text: isPaidHold
+          ? "Envíala al horno desde la campana de pedidos pendientes."
+          : undefined,
       });
     } catch (error) {
       console.error("Error al procesar la venta:", error);

@@ -4,7 +4,13 @@ import axios from "axios";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { subscribeToPusher } from "../../lib/pusherClient";
 import { usePusherConnection } from "../../hooks/usePusherConnection";
-import { Bell, ChevronRight, Loader2, X } from "lucide-react";
+import {
+  Bell,
+  ChevronRight,
+  Flame,
+  Loader2,
+  X,
+} from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { useExchangeRate } from "../../hooks/useExchangeRate";
 
@@ -24,6 +30,7 @@ export default function PendingNotifications() {
 
   const [open, setOpen] = useState(false);
   const [loadingId, setLoadingId] = useState(null);
+  const [sendingToOvenId, setSendingToOvenId] = useState(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -33,12 +40,29 @@ export default function PendingNotifications() {
         notificacion_pendiente_creada: () => {
           queryClient.invalidateQueries({
             queryKey: ["notificaciones-pendientes"],
+            refetchType: "active",
           });
         },
         notificacion_pendiente_resuelta: () => {
           queryClient.invalidateQueries({
             queryKey: ["notificaciones-pendientes"],
           });
+        },
+        notificacion_actualizada: (payload) => {
+          queryClient.setQueryData(
+            ["notificaciones-pendientes"],
+            (oldNotifications = []) =>
+              oldNotifications.map((item) =>
+                item.id_venta === payload.id_venta
+                  ? {
+                      ...item,
+                      monto_restante: payload.monto_restante,
+                      estado_notificacion: payload.estado_notificacion,
+                      en_espera_horno: payload.en_espera_horno,
+                    }
+                  : item
+              )
+          );
         },
       },
     });
@@ -173,6 +197,50 @@ export default function PendingNotifications() {
     }
   };
 
+  const isHoldNotification = (notification) =>
+    Number(notification.en_espera_horno) === 1 ||
+    notification.estado_notificacion === "EnEspera";
+
+  // Venta ya cobrada retenida fuera de cocina: se libera con un solo clic
+  const sendToOven = async (notification) => {
+    if (sendingToOvenId !== null) return;
+
+    setSendingToOvenId(notification.id_venta);
+    setError("");
+    try {
+      const { data } = await axios.post(
+        `${API_URL}/notificaciones-pendientes/${notification.id_venta}/mandar-al-horno`,
+        {},
+        { withCredentials: true },
+      );
+
+      if (!data?.success) {
+        throw new Error(data?.message || "No se pudo enviar al horno.");
+      }
+
+      queryClient.setQueryData(
+        ["notificaciones-pendientes"],
+        (oldNotifications = []) =>
+          oldNotifications.filter(
+            (item) => item.id_venta !== notification.id_venta,
+          ),
+      );
+
+      window.Toast?.fire({
+        icon: "success",
+        title: "¡Pedido enviado al horno!",
+      });
+    } catch (requestError) {
+      console.error("Error enviando el pedido al horno:", requestError);
+      setError(
+        requestError.response?.data?.message ||
+          "No se pudo enviar el pedido al horno.",
+      );
+    } finally {
+      setSendingToOvenId(null);
+    }
+  };
+
   if (notifications.length === 0) return null;
 
   return (
@@ -219,43 +287,98 @@ export default function PendingNotifications() {
             </p>
           ) : (
             <div className="max-h-[55vh] overflow-y-auto p-2">
-              {notifications.map((notification) => (
-                <button
-                  key={notification.id_notificacion}
-                  type="button"
-                  onClick={() => loadNotification(notification)}
-                  disabled={loadingId === notification.id_venta}
-                  className="mb-2 w-full rounded-xl border border-slate-200 bg-slate-50 p-3 text-left hover:border-amber-300 hover:bg-amber-50 transition-colors"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="truncate font-bold text-slate-800">
-                        {notification.nombre_cliente || "Cliente sin nombre"}
-                      </p>
-                      <p className="text-xs text-slate-500">
-                        {notification.cedula_cliente ||
-                          notification.telefono_cliente ||
-                          "Sin identificación"}
-                      </p>
+              {notifications.map((notification) => {
+                const esEsperaHorno = isHoldNotification(notification);
+                const isSending = sendingToOvenId === notification.id_venta;
+                const isLoading = loadingId === notification.id_venta;
+
+                return (
+                  <div
+                    key={notification.id_notificacion}
+                    role={esEsperaHorno ? undefined : "button"}
+                    tabIndex={esEsperaHorno ? undefined : 0}
+                    onClick={
+                      esEsperaHorno ? undefined : () => loadNotification(notification)
+                    }
+                    onKeyDown={
+                      esEsperaHorno
+                        ? undefined
+                        : (event) => {
+                            if (event.key !== "Enter" && event.key !== " ") return;
+                            event.preventDefault();
+                            loadNotification(notification);
+                          }
+                    }
+                    className={`mb-2 w-full rounded-xl border p-3 text-left transition-colors ${
+                      esEsperaHorno
+                        ? "border-orange-200 bg-orange-50"
+                        : "border-slate-200 bg-slate-50 hover:border-amber-300 hover:bg-amber-50 cursor-pointer"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate font-bold text-slate-800">
+                          {notification.nombre_cliente || "Cliente sin nombre"}
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          {notification.cedula_cliente ||
+                            notification.telefono_cliente ||
+                            "Sin identificación"}
+                        </p>
+                      </div>
+                      {esEsperaHorno ? (
+                        isSending ? (
+                          <Loader2 className="h-4 w-4 animate-spin text-orange-600" />
+                        ) : (
+                          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-bold text-orange-700">
+                            <Flame className="h-3 w-3" />
+                            En espera
+                          </span>
+                        )
+                      ) : isLoading ? (
+                        <Loader2 className="h-4 w-4 animate-spin text-amber-600" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4 text-slate-400" />
+                      )}
                     </div>
-                    {loadingId === notification.id_venta ? (
-                      <Loader2 className="h-4 w-4 animate-spin text-amber-600" />
+                    <p className="mt-2 truncate text-xs text-slate-600">
+                      {notification.resumen_items || "Pedido"} ·{" "}
+                      {notification.despacho}
+                    </p>
+                    {esEsperaHorno ? (
+                      <p className="mt-1 font-extrabold text-orange-700">
+                        Pagado · pendiente de enviar al horno
+                      </p>
                     ) : (
-                      <ChevronRight className="h-4 w-4 text-slate-400" />
+                      <p className="mt-1 font-extrabold text-amber-700">
+                        Falta: $
+                        {Number(notification.monto_restante || 0).toFixed(2)}
+                        {exchangeRate > 0 &&
+                          ` · Bs. ${(Number(notification.monto_restante || 0) * exchangeRate).toFixed(2)}`}
+                      </p>
+                    )}
+                    {esEsperaHorno && (
+                      <button
+                        type="button"
+                        onClick={() => sendToOven(notification)}
+                        disabled={isSending}
+                        className={`mt-2 flex w-full items-center justify-center gap-2 rounded-lg px-3 py-2 text-xs font-bold text-white transition-colors ${
+                          isSending
+                            ? "cursor-not-allowed bg-slate-400"
+                            : "bg-orange-500 hover:bg-orange-600"
+                        }`}
+                      >
+                        {isSending ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Flame className="h-3.5 w-3.5" />
+                        )}
+                        {isSending ? "Enviando..." : "Mandar al horno"}
+                      </button>
                     )}
                   </div>
-                  <p className="mt-2 truncate text-xs text-slate-600">
-                    {notification.resumen_items || "Pedido"} ·{" "}
-                    {notification.despacho}
-                  </p>
-                  <p className="mt-1 font-extrabold text-amber-700">
-                    Falta: $
-                    {Number(notification.monto_restante || 0).toFixed(2)}
-                    {exchangeRate > 0 &&
-                      ` · Bs. ${(Number(notification.monto_restante || 0) * exchangeRate).toFixed(2)}`}
-                  </p>
-                </button>
-              ))}
+                );
+              })}
             </div>
           )}
 

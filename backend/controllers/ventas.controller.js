@@ -152,6 +152,163 @@ export const procesarVenta = async (req, res) => {
   }
 };
 
+// ---- Registra venta pagada que NO entra a cocina hasta pulsar "Mandar al horno"
+export const registrarVentaPagadaEnEspera = async (req, res) => {
+  const {
+    id_cliente,
+    id_usuario,
+    id_delivery,
+    despacho,
+    tasa_cambio,
+    monto_total_usd,
+    monto_total_bs,
+    cantidad_cajas = 0,
+    pagos = [],
+    detalles = [],
+  } = req.body;
+  const { id_sucursal } = req.user;
+  const finalUserId = id_usuario || req.user?.id || 1;
+
+  if (!Array.isArray(detalles) || detalles.length === 0) {
+    return res.status(400).json({
+      success: false,
+      message: "El pedido debe contener al menos un detalle.",
+    });
+  }
+
+  if (!validarDetallesNuevos(detalles)) {
+    return res.status(400).json({
+      success: false,
+      message: "Cada producto debe tener un id_producto_origen válido.",
+    });
+  }
+
+  const deliveryId =
+    typeof id_delivery === "object" && id_delivery !== null
+      ? Number(id_delivery.id ?? id_delivery.id_delivery) || null
+      : Number(id_delivery) || null;
+
+  const clienteId =
+    typeof id_cliente === "object" && id_cliente !== null
+      ? Number(id_cliente.id ?? id_cliente.id_cliente) || 1
+      : Number(id_cliente) || 1;
+
+  let tx;
+
+  try {
+    tx = await db.transaction("write");
+
+    const resultVenta = await tx.execute({
+      sql: `INSERT INTO ventas
+       (id_cliente, id_usuario, id_delivery, despacho, estado, fecha_hora, tasa_cambio, monto_total_usd, monto_total_bs, cantidad_caja, id_sucursal)
+      VALUES (?, ?, ?, ?, 'Completado', datetime('now', '-4 hours'), ?, ?, ?, ?, ?)`,
+      args: [
+        clienteId,
+        finalUserId,
+        deliveryId,
+        despacho,
+        tasa_cambio || 0,
+        monto_total_usd || 0,
+        monto_total_bs || 0,
+        Number(cantidad_cajas) || 0,
+        id_sucursal,
+      ],
+    });
+
+    const id_venta = Number(resultVenta.lastInsertRowid);
+
+    for (const pago of pagos) {
+      await tx.execute({
+        sql: `INSERT INTO ventas_pagos
+         (id_venta, metodo_pago, monto_usd, monto_bs, referencia)
+       VALUES (?, ?, ?, ?, ?)`,
+        args: [
+          id_venta,
+          pago.metodo,
+          pago.monto_usd || 0,
+          pago.monto_bs || 0,
+          pago.referencia || null,
+        ],
+      });
+    }
+
+    for (const item of detalles) {
+      const estadoInicial =
+        item.tipo_producto === "Bebida" || item.tipo_producto === "Helado"
+          ? "Completado"
+          : "Pendiente";
+
+      const resultDetalle = await tx.execute({
+        sql: `INSERT INTO venta_detalle
+         (id_venta, tipo_producto, id_producto_origen, cantidad, monto_total, nota, estado)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        args: [
+          id_venta,
+          item.tipo_producto,
+          item.id_producto_origen,
+          item.cantidad,
+          item.monto_total,
+          item.nota || "",
+          estadoInicial,
+        ],
+      });
+
+      if (Array.isArray(item.extras)) {
+        for (const id_extra of item.extras) {
+          await tx.execute({
+            sql: `INSERT INTO detalle_venta_extras (id_detalle, id_extra) VALUES (?, ?)`,
+            args: [Number(resultDetalle.lastInsertRowid), id_extra],
+          });
+        }
+      }
+    }
+
+    // Marca de espera: mientras la notificación esté en "EnEspera" la venta no
+    // aparece en cocina. Al mandarla al horno pasa a "Listo" y se libera.
+    await tx.execute({
+      sql: `INSERT INTO notificaciones
+       (id_venta, id_cliente, id_usuario, monto_restante, fecha_hora, estado)
+      VALUES (?, ?, ?, 0, datetime('now', '-4 hours'), 'EnEspera')`,
+      args: [id_venta, clienteId, finalUserId],
+    });
+
+    await tx.commit();
+
+    // No se emite "pedido_creado": la cocina todavía no debe ver este pedido.
+    emitPusherEvent("pizzeria-sales", "venta_completada", {
+      id_venta,
+      sucursal_id: id_sucursal,
+      tipo_evento: "venta_completada",
+      en_espera_horno: true,
+      timestamp: Date.now(),
+    });
+    emitPusherEvent("pizzeria-notifications", "notificacion_pendiente_creada", {
+      id_venta,
+      id_cliente: clienteId,
+      id_usuario: finalUserId,
+      sucursal_id: id_sucursal,
+      tipo_evento: "notificacion_pendiente_creada",
+      en_espera_horno: true,
+      timestamp: Date.now(),
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: "Venta pagada registrada en espera",
+      id_venta,
+      en_espera_horno: true,
+    });
+  } catch (error) {
+    if (tx) await tx.rollback();
+    console.error("Error al registrar la venta pagada en espera:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Error registrando la venta pagada en espera",
+      error: error.message,
+    });
+  }
+};
+
 // ---- Registra Delivery/Pick Up pendiente de cobro
 export const registrarPedidoPendiente = async (req, res) => {
   const {
@@ -610,6 +767,36 @@ export const editarVenta = async (req, res) => {
       tipo_evento: "pedido_actualizado",
       timestamp: Date.now(),
     });
+
+    // Emitir notificación actualizada si existe una notificación asociada a la venta
+    (async () => {
+      try {
+        const notifRows = await db.execute({
+          sql: `SELECT id_notificacion, estado, monto_restante, id_sucursal FROM notificaciones WHERE id_venta = ?`,
+          args: [id_venta],
+        });
+
+        if (notifRows.rows.length > 0) {
+          const notificacion = notifRows.rows[0];
+          emitPusherEvent(
+            "pizzeria-notifications",
+            "notificacion_actualizada",
+            {
+              id_venta,
+              id_notificacion: notificacion.id_notificacion,
+              estado_notificacion: notificacion.estado,
+              monto_restante: notificacion.monto_restante,
+              sucursal_id:
+                notificacion.id_sucursal || req.user?.id_sucursal || null,
+              tipo_evento: "notificacion_actualizada",
+              timestamp: Date.now(),
+            },
+          );
+        }
+      } catch (err) {
+        console.error("Error al emitir notificacion_actualizada:", err);
+      }
+    })();
 
     res.status(200).json({
       success: true,

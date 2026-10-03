@@ -101,6 +101,8 @@ export default function DeliveryCheckoutModal({ onClose }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const isPendingSale = Boolean(currentOrder.pendingSaleId);
+  // Venta ya cobrada pero retenida: no entra a cocina hasta "Mandar al horno"
+  const isPaidHold = ctxOrderType === "paid_hold";
   const pendingOriginalTotal = currentOrder.pendingOriginalTotal ?? total;
   const pendingAddedTotal = currentOrder.items
     .filter((item) => !item.isPendingExisting)
@@ -302,7 +304,9 @@ export default function DeliveryCheckoutModal({ onClose }) {
     try {
       const endpoint = isPendingSale
         ? `${API_BASE}/completar-venta-pendiente/${currentOrder.pendingSaleId}`
-        : `${API_BASE}/procesar-venta`;
+        : isPaidHold
+          ? `${API_BASE}/registrar-venta-pagada-en-espera`
+          : `${API_BASE}/procesar-venta`;
 
       const requestPayload = isPendingSale
         ? {
@@ -339,10 +343,16 @@ export default function DeliveryCheckoutModal({ onClose }) {
         }
         Swal.fire({
           icon: "success",
-          title: isPendingSale ? "¡Venta Completada!" : "¡Orden Creada!",
+          title: isPendingSale
+            ? "¡Venta Completada!"
+            : isPaidHold
+              ? "¡Venta en Espera!"
+              : "¡Orden Creada!",
           text: isPendingSale
             ? "El pago pendiente ha sido liquidado exitosamente."
-            : "La orden delivery ha sido registrada y enviada a cocina exitosamente.",
+            : isPaidHold
+              ? "La venta quedó cobrada y retenida. Envíala al horno desde la campana de pedidos pendientes."
+              : "La orden delivery ha sido registrada y enviada a cocina exitosamente.",
           confirmButtonColor: "#EA2A33",
           confirmButtonText: "Aceptar",
           timer: 2500,
@@ -356,12 +366,20 @@ export default function DeliveryCheckoutModal({ onClose }) {
         if (window.Toast) {
           window.Toast.fire({
             icon: "success",
-            title: "¡Venta delivery procesada exitosamente!",
+            title: isPaidHold
+              ? "¡Venta registrada en espera!"
+              : "¡Venta delivery procesada exitosamente!",
           });
         }
         queryClient.invalidateQueries({ queryKey: ["ventasHoy"] });
         queryClient.invalidateQueries({ queryKey: ["pedidosActivos"] });
-        queryClient.invalidateQueries({ queryKey: ["entregas"] });
+        if (isPaidHold) {
+          queryClient.invalidateQueries({
+            queryKey: ["notificaciones-pendientes"],
+          });
+        } else {
+          queryClient.invalidateQueries({ queryKey: ["entregas"] });
+        }
         clearCart();
         onClose();
       } else {
