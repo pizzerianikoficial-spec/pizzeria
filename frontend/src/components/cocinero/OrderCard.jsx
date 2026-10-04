@@ -5,6 +5,41 @@ const BOX_CATEGORY = "cajas";
 const isBoxItem = (item) =>
   String(item?.category || "").toLowerCase() === BOX_CATEGORY;
 
+const INFORMATIVE_CATEGORIES = ["drinks"];
+
+const DONE_STATES = ["Completado", "Cerrado"];
+
+const isInformative = (item) =>
+  INFORMATIVE_CATEGORIES.includes(String(item?.category || "").toLowerCase());
+
+const isItemDone = (item) => DONE_STATES.includes(item?.status);
+
+const ITEM_BASE_CLASS =
+  "flex items-start gap-2 bg-pizza-gray-2 border border-pizza-gray-3 rounded-lg px-3 py-2 3xl:px-4 3xl:py-3";
+
+const itemClass = (item) =>
+  isInformative(item)
+    ? `${ITEM_BASE_CLASS} border-dashed opacity-80`
+    : ITEM_BASE_CLASS;
+
+const informativeBadge = (item) => {
+  if (!isInformative(item)) return null;
+
+  const done = isItemDone(item);
+
+  return (
+    <span
+      className={`flex-shrink-0 text-xs font-bold px-1.5 py-0.5 rounded-md border ${
+        done
+          ? "bg-emerald-100 text-emerald-700 border-emerald-200"
+          : "bg-amber-50 text-amber-700 border-amber-200"
+      }`}
+    >
+      {done ? "Listo" : "Pendiente"}
+    </span>
+  );
+};
+
 function useTimer(createdAt) {
   const [elapsed, setElapsed] = useState("");
 
@@ -174,7 +209,8 @@ export function OrderCard({
       ? order.items.filter(
           (it) =>
             (it.category && itemsFilter.includes(it.category)) ||
-            (showBoxes && isBoxItem(it)),
+            (showBoxes && isBoxItem(it)) ||
+            isInformative(it),
         )
       : order.items;
 
@@ -275,7 +311,7 @@ export function OrderCard({
           visibleItems.map((item, i) => (
             <div
               key={`${item.category || "x"}-${i}`}
-              className="flex items-start gap-2 bg-pizza-gray-2 border border-pizza-gray-3 rounded-lg px-3 py-2 3xl:px-4 3xl:py-3"
+              className={itemClass(item)}
             >
               <span
                 className={`text-pizza-red flex-shrink-0 w-5 3xl:w-7 ${
@@ -295,6 +331,7 @@ export function OrderCard({
                   }`}
                 >
                   <span>{item.name}</span>
+                  {informativeBadge(item)}
                 </p>
                 {(item.size || item.description) && (
                   <p

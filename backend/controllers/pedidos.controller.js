@@ -8,6 +8,36 @@ const queryRows = async (sql, args = []) => {
 
 const executeCommand = (sql, args = []) => db.execute({ sql, args });
 
+const ESTADOS_EXCLUIDOS = ["Cancelado", "Cerrado"];
+
+const sqlDetallesInformativos = (marcasVentas) => `
+        UNION ALL
+
+        SELECT
+          vd.id_venta,
+          vd.id_detalle,
+          vd.cantidad,
+          vd.nota,
+          vd.tipo_producto,
+          vd.estado AS estado_detalle,
+          b.nombre AS nombre_producto,
+          NULL AS categoria_pizza,
+          NULL AS combo_descripcion
+        FROM venta_detalle vd
+        INNER JOIN bebidas b
+          ON vd.tipo_producto = 'Bebida'
+          AND b.id_bebida = vd.id_producto_origen
+        WHERE vd.id_venta IN (${marcasVentas})
+          AND vd.tipo_producto = 'Bebida'
+          AND vd.estado NOT IN (${ESTADOS_EXCLUIDOS.map(() => "?").join(", ")})
+          AND EXISTS (
+            SELECT 1
+            FROM venta_detalle vd2
+            WHERE vd2.id_venta = vd.id_venta
+              AND vd2.tipo_producto = 'Pizza'
+          )
+      `;
+
 const obtenerDetallesCocinaBatch = async (ventas, estado) => {
   const idsVentas = ventas.map((v) => v.id_venta);
   if (idsVentas.length === 0) return [];
@@ -49,10 +79,18 @@ const obtenerDetallesCocinaBatch = async (ventas, estado) => {
       WHERE vd.id_venta IN (${marcas})
         AND vd.estado = ?
         AND vd.tipo_producto = 'Combo'
+${sqlDetallesInformativos(marcas)}
 
       ORDER BY id_detalle ASC
     `,
-    [...idsVentas, estado, ...idsVentas, estado],
+    [
+      ...idsVentas,
+      estado,
+      ...idsVentas,
+      estado,
+      ...idsVentas,
+      ...ESTADOS_EXCLUIDOS,
+    ],
   );
 };
 
