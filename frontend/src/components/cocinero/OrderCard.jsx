@@ -22,24 +22,6 @@ const itemClass = (item) =>
     ? `${ITEM_BASE_CLASS} border-dashed opacity-80`
     : ITEM_BASE_CLASS;
 
-const informativeBadge = (item) => {
-  if (!isInformative(item)) return null;
-
-  const done = isItemDone(item);
-
-  return (
-    <span
-      className={`flex-shrink-0 text-xs font-bold px-1.5 py-0.5 rounded-md border ${
-        done
-          ? "bg-emerald-100 text-emerald-700 border-emerald-200"
-          : "bg-amber-50 text-amber-700 border-amber-200"
-      }`}
-    >
-      {done ? "Listo" : "Pendiente"}
-    </span>
-  );
-};
-
 function useTimer(createdAt) {
   const [elapsed, setElapsed] = useState("");
 
@@ -331,7 +313,6 @@ export function OrderCard({
                   }`}
                 >
                   <span>{item.name}</span>
-                  {informativeBadge(item)}
                 </p>
                 {(item.size || item.description) && (
                   <p
