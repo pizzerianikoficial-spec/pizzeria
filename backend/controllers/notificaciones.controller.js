@@ -7,14 +7,9 @@ const consultarNotificacionesPendientesBD = async () => {
             n.monto_restante, n.estado AS estado_notificacion, n.fecha_hora,
             c.nombre AS nombre_cliente, c.cedula AS cedula_cliente,
             c.telefono AS telefono_cliente,
-<<<<<<< HEAD
             v.despacho, v.costo_delivery, d.nombre AS nombre_delivery, d.digitos AS digitos_delivery,
-            CASE WHEN n.estado = 'EnEspera' THEN 1 ELSE 0 END AS en_espera_horno,
-=======
-            v.despacho, d.nombre AS nombre_delivery, d.digitos AS digitos_delivery,
             CASE WHEN n.estado = 'Pendiente' AND v.estado = 'Completado'
                  THEN 1 ELSE 0 END AS en_espera_horno,
->>>>>>> 0222472744ab863a41122c04057a3359f12f3733
             COALESCE(SUM(vd.cantidad), 0) AS cantidad_items,
             GROUP_CONCAT(
               vd.cantidad || 'x ' || COALESCE(p.nombre, b.nombre, h.nombre, vd.tipo_producto),
