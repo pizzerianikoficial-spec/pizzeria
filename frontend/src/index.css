@@ -113,4 +113,32 @@
     overflow-y: auto;
     overflow-x: hidden;
   }
+  .modal-max-h {
+    max-height: calc(100vh - 1rem);
+    max-height: calc(100dvh - 1rem);
+  }
+  @media (min-width: 640px) {
+    .modal-max-h {
+      max-height: calc(100vh - 2rem);
+      max-height: calc(100dvh - 2rem);
+    }
+  }
+  .modal-scroll {
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: #d1d5db transparent;
+    scrollbar-gutter: stable both-edges;
+  }
+  @media (hover: none), (pointer: coarse) {
+    .modal-scroll {
+      scrollbar-width: none;
+      scrollbar-gutter: auto;
+    }
+    .modal-scroll::-webkit-scrollbar {
+      display: none;
+    }
+  }
 }

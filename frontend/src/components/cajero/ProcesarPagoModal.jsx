@@ -183,17 +183,20 @@ export default function ProcesarPagoModal({
   };
 
   return (
-    <div className="modal-backdrop z-[90]" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-[90] flex items-center justify-center overflow-hidden overscroll-contain bg-white/70 p-2 backdrop-blur-sm sm:p-4"
+      onClick={onClose}
+    >
       <div
-        className="modal-content w-full max-w-[520px] overflow-hidden max-h-[92vh] overflow-y-auto"
+        className="modal-content modal-max-h flex w-full max-w-[520px] flex-col overflow-hidden lg:max-w-[600px] 3xl:max-w-[680px]"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-white">
-          <div>
-            <h2 className="text-slate-900 font-bold text-xl">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-whiteflex shrink-0 items-start justify-between gap-3 border-b border-slate-200 bg-white px-4 py-3 sm:px-6 sm:py-4 [@media(max-height:500px)]:py-2">
+          <div className="min-w-0">
+            <h2 className="truncate text-slate-900 font-bold text-lg sm:text-xl">
               {step === 3 ? "¡Pago Registrado!" : "Cobrar Diferencia"}
             </h2>
-            <p className="text-sm text-slate-500 mt-1">
+            <p className="text-sm text-slate-500 mt-0.5 sm:mt-1">
               Cliente:{" "}
               <span className="font-semibold text-slate-900">
                 {cliente?.nombre || "N/A"}
@@ -202,55 +205,50 @@ export default function ProcesarPagoModal({
           </div>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-100 transition-colors"
+            className="-mr-1 shrink-0 rounded-lg p-2.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="p-4 sm:p-6 bg-slate-50 space-y-4 sm:space-y-5">
+        <div className="modal-scroll min-h-0 flex-1 space-y-4 bg-slate-50 p-4 sm:space-y-5 sm:p-6">
           {step !== 3 && (
             <div className="rounded-xl sm:rounded-2xl md:rounded-3xl border border-slate-200 bg-white p-4 sm:p-5 shadow-sm">
-              <div className="flex items-center justify-between gap-4 mb-4">
+              <div className="flex items-center justify-between gap-3 mb-3 sm:mb-4">
                 <div>
                   <p className="text-xs uppercase tracking-[0.22em] text-slate-400">
                     Moneda
                   </p>
                 </div>
                 <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => handleCurrencyChange("Bs")}
-                    className={`px-3 py-1 rounded-full text-sm font-semibold transition ${
-                      currency === "Bs"
-                        ? "bg-slate-900 text-white"
-                        : "bg-slate-100 text-slate-700"
-                    }`}
-                  >
-                    Bs
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleCurrencyChange("USD")}
-                    className={`px-3 py-1 rounded-full text-sm font-semibold transition ${
-                      currency === "USD"
-                        ? "bg-slate-900 text-white"
-                        : "bg-slate-100 text-slate-700"
-                    }`}
-                  >
-                    $
-                  </button>
+                  {[
+                    { value: "Bs", label: "Bs" },
+                    { value: "USD", label: "$" },
+                  ].map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => handleCurrencyChange(opt.value)}
+                      className={`min-h-[40px] min-w-[52px] rounded-full px-4 text-sm font-semibold transition ${
+                        currency === opt.value
+                          ? "bg-slate-900 text-white"
+                          : "bg-slate-100 text-slate-700"
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
                 </div>
               </div>
-              <div className="rounded-3xl bg-slate-50 border border-slate-200 p-4 flex items-center justify-between">
-                <div className="text-slate-500 uppercase tracking-[0.22em] text-xs font-semibold">
+              <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 rounded-2xl border border-slate-200 bg-slate-50 p-3 sm:p-4">
+                <div className="text-slate-500 uppercase tracking-[0.18em] text-xs font-semibold">
                   Diferencia a pagar
                 </div>
-                <div className="text-right">
-                  <div className="text-slate-900 font-black text-2xl">
+                <div className="ml-auto min-w-0 text-right">
+                  <div className="break-words text-xl font-black text-slate-900 sm:text-2xl">
                     {formatDisplay(remainingUSD)}
                   </div>
-                  <div className="text-xs text-slate-500 mt-1">
+                  <div className="text-xs text-slate-500 mt-0.5 sm:mt-1">
                     {currency === "Bs"
                       ? formatDisplayUSD(remainingUSD)
                       : `Bs. ${(remainingUSD * (exchangeRate || 0)).toFixed(2)}`}
@@ -265,7 +263,7 @@ export default function ProcesarPagoModal({
               <p className="text-sm font-semibold text-slate-800">
                 Selecciona el método de pago
               </p>
-              <div className="grid gap-3">
+              <div className="flex flex-col gap-2.5 sm:gap-3">
                 {PAYMENT_METHODS.map((method) => {
                   const Icon = method.icon;
                   return (
@@ -273,12 +271,12 @@ export default function ProcesarPagoModal({
                       key={method.id}
                       type="button"
                       onClick={() => handleSelectMethod(method)}
-                      className={`w-full flex items-center gap-4 rounded-3xl border px-4 py-4 text-left transition ${method.bg}`}
+                      className={`flex min-h-[60px] w-full items-center gap-3 rounded-2xl border px-3 py-3 text-left transition sm:gap-4 sm:px-4 sm:py-4 ${method.bg}`}
                     >
-                      <div className="w-11 h-11 rounded-2xl flex items-center justify-center bg-white shadow-sm">
+                      <div className="w-10 h-10 sm:w-11 sm:h-11 shrink-0 rounded-2xl flex items-center justify-center bg-white shadow-sm">
                         <Icon className={`w-5 h-5 ${method.color}`} />
                       </div>
-                      <div className="flex-1">
+                      <div className="flex-1 min-w-0">
                         <p className="font-semibold text-slate-900">
                           {method.label}
                         </p>
@@ -311,21 +309,21 @@ export default function ProcesarPagoModal({
                     setStep(1);
                     setError("");
                   }}
-                  className="text-slate-500 hover:text-slate-900 text-sm font-semibold"
+                  className="min-h-[40px] shrink-0 text-sm font-semibold text-slate-500 hover:text-slate-900"
                 >
                   ← Volver
                 </button>
-                <div className="inline-flex items-center gap-2 text-slate-900 font-semibold text-sm">
+                <div className="inline-flex min-w-0 items-center gap-2 text-slate-900 font-semibold text-sm">
                   {SelectedIcon && (
                     <SelectedIcon
-                      className={`${selectedMethod.color} w-5 h-5`}
+                      className={`${selectedMethod.color} w-5 h-5 shrink-0`}
                     />
                   )}
                   <span>{selectedMethod.label}</span>
                 </div>
               </div>
 
-              <div className="rounded-3xl bg-white border border-slate-200 p-5 shadow-sm">
+              <div className="rounded-2xl sm:rounded-3xl bg-white border border-slate-200 p-4 sm:p-5 shadow-sm">
                 <div className="mb-4">
                   <label className="block text-sm font-semibold text-slate-700 mb-2">
                     Monto a cobrar
@@ -344,7 +342,7 @@ export default function ProcesarPagoModal({
                         setError("");
                       }}
                       onKeyDown={(e) => e.key === "Enter" && handleApply()}
-                      className="w-full pl-14 pr-4 py-4 text-3xl font-extrabold text-slate-900 border border-slate-200 rounded-3xl focus:outline-none focus:border-pizza-red focus:ring-2 focus:ring-pizza-red/10 transition"
+                      className="w-full min-w-0 rounded-2xl border border-slate-200 py-3 pl-14 pr-4 text-2xl font-extrabold text-slate-900 transition focus:border-pizza-red focus:outline-none focus:ring-2 focus:ring-pizza-red/10 sm:rounded-3xl sm:py-4 sm:text-3xl"
                       autoFocus
                     />
                   </div>
@@ -361,9 +359,9 @@ export default function ProcesarPagoModal({
                     setAmountInput(displayRemaining);
                     setError("");
                   }}
-                  className="w-full inline-flex items-center justify-center gap-2 rounded-3xl border border-slate-200 bg-slate-100 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-200 transition"
+                  className="inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-slate-100 px-3 py-2.5 text-center text-sm font-semibold text-slate-700 transition hover:bg-slate-200 sm:rounded-3xl"
                 >
-                  <Zap className="w-4 h-4 text-pizza-red" />
+                  <Zap className="w-4 h-4 shrink-0 text-pizza-red" />
                   Usar monto exacto (
                   {currency === "Bs"
                     ? `Bs. ${displayRemaining}`
@@ -384,7 +382,7 @@ export default function ProcesarPagoModal({
                         setError("");
                       }}
                       placeholder="Ej. 123456"
-                      className="w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 focus:outline-none focus:border-pizza-red focus:ring-2 focus:ring-pizza-red/10 transition"
+                      className="w-full min-w-0 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-base text-slate-900 transition focus:border-pizza-red focus:outline-none focus:ring-2 focus:ring-pizza-red/10 sm:rounded-3xl sm:text-sm"
                       onKeyDown={(e) => e.key === "Enter" && handleApply()}
                     />
                   </div>
@@ -409,9 +407,9 @@ export default function ProcesarPagoModal({
           )}
 
           {step === 3 && (
-            <div className="rounded-3xl bg-white border border-slate-200 p-6 shadow-sm text-center">
-              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100">
-                <CheckCircle2 className="w-10 h-10 text-emerald-600" />
+            <div className="rounded-2xl sm:rounded-3xl bg-white border border-slate-200 p-4 sm:p-6 shadow-sm text-center">
+              <div className="mx-auto mb-3 sm:mb-4 flex h-14 w-14 sm:h-16 sm:w-16 items-center justify-center rounded-full bg-emerald-100">
+                <CheckCircle2 className="w-9 h-9 sm:w-10 sm:h-10 text-emerald-600" />
               </div>
               <h3 className="text-lg font-bold text-slate-900">
                 Pago procesado
@@ -419,19 +417,25 @@ export default function ProcesarPagoModal({
               <p className="text-sm text-slate-500 mt-2">
                 Se ha registrado el pago de la diferencia correctamente.
               </p>
-              <div className="mt-6 text-left rounded-3xl bg-slate-50 border border-slate-200 p-4 text-sm text-slate-700">
-                <div className="flex justify-between mb-2">
+              <div className="mt-5 sm:mt-6 text-left rounded-2xl bg-slate-50 border border-slate-200 p-3 sm:p-4 text-sm text-slate-700">
+                <div className="flex justify-between mb-2 gap-3">
                   <span className="font-semibold">Método</span>
-                  <span>{selectedMethod?.label}</span>
+                  <span className="min-w-0 break-words text-right">
+                    {selectedMethod?.label}
+                  </span>
                 </div>
-                <div className="flex justify-between mb-2">
+                <div className="flex justify-between mb-2 gap-3">
                   <span className="font-semibold">Monto</span>
-                  <span>{formatDisplay(paymentUSD)}</span>
+                  <span className="min-w-0 break-words text-right">
+                    {formatDisplay(paymentUSD)}
+                  </span>
                 </div>
                 {selectedMethod?.reqRef && (
-                  <div className="flex justify-between text-slate-500">
+                  <div className="flex justify-between gap-3 text-slate-500">
                     <span>Referencia</span>
-                    <span>{referencia || "N/A"}</span>
+                    <span className="min-w-0 break-words text-right">
+                      {referencia || "N/A"}
+                    </span>
                   </div>
                 )}
               </div>

@@ -117,13 +117,13 @@ export default function CheckoutModal({ onClose }) {
                 ? "Pago Móvil (abono)"
                 : ctxAdvancePaymentMethod === "cash"
                   ? "Efectivo (abono)"
-: ctxAdvancePaymentMethod === "pos"
-                      ? "Punto de Venta (abono)"
-                      : ctxAdvancePaymentMethod === "cashea"
-                        ? "Cashea (abono)"
-                        : ctxAdvancePaymentMethod === "binance"
-                          ? "Binance/Zelle (abono)"
-                          : "Abono previo",
+                  : ctxAdvancePaymentMethod === "pos"
+                    ? "Punto de Venta (abono)"
+                    : ctxAdvancePaymentMethod === "cashea"
+                      ? "Cashea (abono)"
+                      : ctxAdvancePaymentMethod === "binance"
+                        ? "Binance/Zelle (abono)"
+                        : "Abono previo",
             amount: ctxAdvanceAmount,
             currency: ctxAdvanceCurrency,
           },
@@ -512,68 +512,84 @@ export default function CheckoutModal({ onClose }) {
     handleProcesarVenta();
   };
 
+  const ORDER_TYPE_OPTIONS = [
+    { value: "dine_in", label: "Local" },
+    { value: "takeaway", label: "Llevar" },
+    { value: "delivery_ws", label: "Delivery" },
+    { value: "pickup", label: "Pickup" },
+  ];
+
+  const showDeliveryCost =
+    (orderType === "delivery" || ctxOrderType === "delivery") &&
+    Number(currentOrder.deliveryCostUSD) > 0;
+
   return (
-    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 animate-fade-in">
+    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center overflow-hidden overscroll-contain p-2 sm:p-4">
       <div
-        className="bg-white rounded-xl sm:rounded-2xl w-full max-w-md max-h-[92vh] max-h-[92dvh] overflow-y-auto shadow-2xl"
+        className="modal-max-h flex animate-fade-in flex-col overflow-hidden bg-white rounded-xl sm:rounded-2xl w-full sm:max-w-md lg:max-w-[500px] 3xl:max-w-[560px] shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+        <div className="flex shrink-0 items-center justify-between gap-3 px-4 py-3 sm:px-6 sm:py-4 border-b border-slate-100 bg-slate-50/50 [@media(max-height:500px)]:py-2">
           <div>
-            <h2 className="text-slate-800 font-bold text-lg">
+            <h2 className="min-w-0 truncate text-slate-800 font-bold text-lg">
               {step === 2 ? "Ticket de Factura" : "Procesar Pago"}
             </h2>
           </div>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-slate-700 p-1.5 rounded-lg hover:bg-slate-100 transition-colors"
+            className="-mr-1 shrink-0 text-slate-400 hover:text-slate-700 p-2.5 rounded-lg hover:bg-slate-100 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="p-4 sm:p-6">
+        <div className="modal-scroll min-h-0 flex-1 p-4 sm:p-6">
           {step === 1 && (
             <div className="flex flex-col gap-4">
-              <div className="flex items-center justify-between bg-slate-50 border border-slate-100 rounded-xl p-4">
+              <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-50 border border-slate-100 rounded-xl p-3 sm:p-4">
                 <div>
                   <span className="text-slate-600 font-medium">
                     Total a Pagar
                   </span>
-                  <div className="text-slate-800 font-extrabold text-lg">
+                  <div className="text-slate-800 font-extrabold text-lg break-words">
                     {formatDisplay(totalToUse)}
                   </div>
-                  {(orderType === "delivery" || ctxOrderType === "delivery") && Number(currentOrder.deliveryCostUSD) > 0 && (
-                    <span className="text-[11px] text-slate-500 font-medium block">
-                      (Incluye delivery: ${Number(currentOrder.deliveryCostUSD).toFixed(2)})
+                  {showDeliveryCost && (
+                    <span className="block text-[11px] font-medium text-slate-500">
+                      (Incluye delivery: $
+                      {Number(currentOrder.deliveryCostUSD).toFixed(2)})
                     </span>
                   )}
                 </div>
-                <div className="flex items-center gap-3">
-                  <div className="flex gap-2">
+                <div className="flex gap-2">
+                  {[
+                    { value: "Bs", label: "Bs" },
+                    { value: "USD", label: "$" },
+                  ].map((opt) => (
                     <button
-                      onClick={() => setCurrency("Bs")}
-                      className={`px-3 py-1 rounded-lg ${currency === "Bs" ? "bg-pizza-red/10 text-pizza-red" : "bg-slate-100"}`}
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setCurrency(opt.value)}
+                      className={`min-h-[40px] min-w-[48px] rounded-lg px-3 text-sm font-semibold ${
+                        currency === opt.value
+                          ? "bg-pizza-red/10 text-pizza-red"
+                          : "bg-slate-100"
+                      }`}
                     >
-                      Bs
+                      {opt.label}
                     </button>
-                    <button
-                      onClick={() => setCurrency("USD")}
-                      className={`px-3 py-1 rounded-lg ${currency === "USD" ? "bg-pizza-red/10 text-pizza-red" : "bg-slate-100"}`}
-                    >
-                      $
-                    </button>
-                  </div>
+                  ))}
                 </div>
               </div>
 
-              <div className="flex items-center gap-3">
-                <label className="text-slate-600 text-sm">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                <label className="flex min-h-[40px] cursor-pointer items-center gap-2 text-slate-600 text-sm">
                   Modificar total:
                 </label>
                 <input
                   type="checkbox"
+                  className="h-5 w-5 accent-pizza-red"
                   checked={overrideTotalEnabled}
                   onChange={(e) => setOverrideTotalEnabled(e.target.checked)}
                 />
@@ -581,7 +597,7 @@ export default function CheckoutModal({ onClose }) {
                   <input
                     value={overrideTotal}
                     onChange={(e) => setOverrideTotal(e.target.value)}
-                    className="input-field ml-2"
+                    className="input-field min-w-0 flex-1 basis-40 py-2.5 text-base sm:text-sm"
                     placeholder={`Total en ${currency === "Bs" ? "Bs" : "USD"}`}
                   />
                 )}
@@ -593,25 +609,16 @@ export default function CheckoutModal({ onClose }) {
                     ¿Tipo de orden?
                   </p>
                   <div className="grid grid-cols-3 gap-2 sm:gap-3">
-                    <button
-                      onClick={() => setOrderType("dine_in")}
-                      className="btn-secondary hover:bg-pizza-red/10 hover:text-pizza-red"
-                    >
-                      Local
-                    </button>
-                    <button
-                      onClick={() => setOrderType("takeaway")}
-                      className="btn-secondary hover:bg-pizza-red/10 hover:text-pizza-red"
-                    >
-                      Llevar
-                    </button>
-
-                    <button
-                      onClick={() => setOrderType("delivery_ws")}
-                      className="btn-secondary hover:bg-pizza-red/10 hover:text-pizza-red"
-                    >
-                      Delivery
-                    </button>
+                    {ORDER_TYPE_OPTIONS.map((opt) => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => setOrderType(opt.value)}
+                        className="btn-secondary px-2 py-3 text-sm hover:bg-pizza-red/10 hover:text-pizza-red"
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
                   </div>
                 </div>
               ) : (
@@ -626,22 +633,22 @@ export default function CheckoutModal({ onClose }) {
                   <p className="text-slate-600 font-medium text-sm">
                     Selecciona el método de pago:
                   </p>
-                  <div className="flex flex-col gap-3">
+                  <div className="flex flex-col gap-2.5 sm:gap-3">
                     {PAYMENT_METHODS.map((method) => {
                       const Icon = method.icon;
                       return (
                         <button
                           key={method.id}
                           onClick={() => handleSelectMethod(method)}
-                          className={`flex items-center gap-4 px-4 py-4 rounded-xl border transition-all duration-200 ${method.bg}`}
+                          className={`flex min-h-[56px] items-center gap-3 px-3 py-3 sm:gap-4 sm:px-4 sm:py-4 rounded-xl border transition-all duration-200 ${method.bg}`}
                         >
-                          <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-white shadow-sm">
+                          <div className="w-10 h-10 rounded-xl flex items-center shrink-0 justify-center bg-white shadow-sm">
                             <Icon className={`w-5 h-5 ${method.color}`} />
                           </div>
-                          <span className="text-slate-800 font-bold flex-1 text-left">
+                          <span className="text-slate-800 font-bold flex-1 min-w-0 truncate text-left">
                             {method.label}
                           </span>
-                          <ChevronRight className="w-4 h-4 text-slate-400" />
+                          <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
                         </button>
                       );
                     })}
@@ -663,11 +670,11 @@ export default function CheckoutModal({ onClose }) {
               {paymentsInternal.length > 0 && (
                 <div className="bg-white border rounded-xl p-3">
                   <p className="text-slate-600 text-sm font-semibold">Pagos</p>
-                  <div className="mt-2">
+                  <div className="mt-2 space-y-1">
                     {paymentsInternal.map((p, i) => (
                       <div key={i} className="flex justify-between text-sm">
-                        <div>{p.label}</div>
-                        <div>
+                        <div className="min-w-0 break-words">{p.label}</div>
+                        <div className="shrink-0 whitespace-nowrap">
                           {p.method === "cashea"
                             ? `$${p.amount.toFixed(2)}`
                             : currency === "Bs"
@@ -677,9 +684,11 @@ export default function CheckoutModal({ onClose }) {
                       </div>
                     ))}
                   </div>
-                  <div className="flex justify-between font-bold mt-3">
+                  <div className="flex justify-between gap-3 font-bold mt-3">
                     <div>Restante</div>
-                    <div>{formatDisplay(remainingLocalUSD)}</div>
+                    <div className="shrink-0 whitespace-nowrap">
+                      {formatDisplay(remainingLocalUSD)}
+                    </div>
                   </div>
                 </div>
               )}
@@ -695,9 +704,9 @@ export default function CheckoutModal({ onClose }) {
                     <img
                       src={logo}
                       alt="Logo Pizzería"
-                      className="w-20 h-auto"
+                      className="w-16 sm:w-20 h-auto"
                     />
-                    <div className="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center shadow-sm border border-emerald-100">
+                    <div className="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center shrink-0 shadow-sm border border-emerald-100">
                       <CheckCircle2 className="w-6 h-6 text-emerald-500" />
                     </div>
                   </div>
@@ -721,17 +730,17 @@ export default function CheckoutModal({ onClose }) {
                       DATOS DEL CLIENTE
                     </div>
                     {currentOrder.customer?.name && (
-                      <div className="flex justify-between">
-                        <span>Nombre:</span>
-                        <span className="font-medium">
+                      <div className="flex justify-between gap-3">
+                        <span className="shrink-0">Nombre:</span>
+                        <span className="font-medium min-w-0 break-words text-right">
                           {currentOrder.customer.name}
                         </span>
                       </div>
                     )}
                     {currentOrder.customer?.cedula && (
                       <div className="flex justify-between">
-                        <span>C.I./RIF:</span>
-                        <span className="font-medium">
+                        <span className="shrink-0">C.I./RIF:</span>
+                        <span className="font-medium min-w-0 break-words text-right">
                           {currentOrder.customer.cedula}
                         </span>
                       </div>
@@ -741,45 +750,37 @@ export default function CheckoutModal({ onClose }) {
 
                 <div className="space-y-2 border-t border-b border-dashed border-slate-300 py-3 mb-3">
                   {currentOrder.items.map((item, idx) => (
-                    <div key={idx} className="flex justify-between">
-                      <span>
+                    <div key={idx} className="flex justify-between gap-3">
+                      <span className="min-w-0 break-words">
                         {item.qty}x {item.name}
                       </span>
-                      <span>
+                      <span className="shrink-0 whitespace-nowrap">
                         {currency === "Bs"
                           ? `Bs. ${(item.price * item.qty * (exchangeRate || 0)).toFixed(2)}`
                           : `$${(item.price * item.qty).toFixed(2)}`}
                       </span>
                     </div>
                   ))}
-                  {(orderType === "delivery" || ctxOrderType === "delivery") && Number(currentOrder.deliveryCostUSD) > 0 && (
-                    <div className="flex justify-between font-semibold text-slate-700 bg-red-50/60 p-1 rounded">
-                      <span>Costo de Delivery</span>
-                      <span>
+                  {showDeliveryCost && (
+                    <div className="flex justify-between gap-3 rounded bg-red-50/60 p-1 font-semibold text-slate-700">
+                      <span className="min-w-0">Costo de Delivery</span>
+                      <span className="shrink-0 whitespace-nowrap">
                         {currency === "Bs"
                           ? `Bs. ${(Number(currentOrder.deliveryCostUSD) * (exchangeRate || 0)).toFixed(2)}`
                           : `$${Number(currentOrder.deliveryCostUSD).toFixed(2)}`}
                       </span>
                     </div>
                   )}
-                  {/* {soldBoxes > 0 && (
-                    <div className="flex justify-between font-semibold">
-                      <span>
-                        {soldBoxes}x {soldBoxes === 1 ? "Caja" : "Cajas"}
-                      </span>
-                      <span>{formatDisplay(boxesTotalUSD)}</span>
-                    </div>
-                  )} */}
                 </div>
-                <div className="flex justify-between font-bold text-base border-t border-slate-300 pt-2">
+                <div className="flex justify-between gap-3 font-bold text-base border-t border-slate-300 pt-2">
                   <span>TOTAL PAGADO</span>
                   <div className="text-right">
-                    <div>
+                    <div className="whitespace-nowrap">
                       {currency === "Bs"
                         ? `Bs. ${(paidSoFar * (exchangeRate || 0)).toFixed(2)}`
                         : `$${paidSoFar.toFixed(2)}`}
                     </div>
-                    <div className="text-slate-500 text-xs font-semibold mt-0.5">
+                    <div className="text-slate-500 text-xs font-semibold mt-0.5 whitespace-nowrap">
                       {currency === "Bs"
                         ? formatDisplay(totalToUse)
                         : formatDisplay(totalToUse)}
@@ -796,7 +797,7 @@ export default function CheckoutModal({ onClose }) {
                 </div>
               </div>
 
-              {error && (
+              {/* {error && (
                 <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                   {error}
                 </div>
@@ -817,10 +818,42 @@ export default function CheckoutModal({ onClose }) {
                 >
                   {isSubmitting ? "Procesando..." : "Cerrar"}
                 </button>
-              </div>
+              </div> */}
             </div>
           )}
         </div>
+        {/* Footer fijo: acciones del ticket siempre visibles */}
+        {step === 2 && (
+          <div className="shrink-0 border-t border-slate-100 bg-white px-4 py-3 sm:px-6 sm:py-4">
+            {error && (
+              <div
+                role="alert"
+                className="mb-3 break-words rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700"
+              >
+                {error}
+              </div>
+            )}
+            <div className="flex flex-col-reverse gap-2 min-[420px]:flex-row sm:gap-3">
+              <button
+                type="button"
+                onClick={handleConfirmAndPrint}
+                disabled={isSubmitting}
+                className={`flex min-h-[48px] flex-1 items-center justify-center gap-2 rounded-xl py-3 text-base font-bold shadow-md transition-all ${isSubmitting ? "cursor-not-allowed bg-slate-400 text-slate-200" : "bg-slate-800 text-white hover:bg-slate-900"}`}
+              >
+                <Printer className="h-5 w-5" />
+                {isSubmitting ? "Procesando..." : "Imprimir"}
+              </button>
+              <button
+                type="button"
+                onClick={handleProcesarVenta}
+                disabled={isSubmitting}
+                className={`flex min-h-[48px] flex-1 items-center justify-center gap-2 rounded-xl py-3 text-base font-bold shadow-md transition-all ${isSubmitting ? "cursor-not-allowed bg-slate-400 text-slate-200" : "bg-pizza-red text-white hover:opacity-90"}`}
+              >
+                {isSubmitting ? "Procesando..." : "Cerrar"}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
