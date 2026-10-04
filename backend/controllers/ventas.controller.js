@@ -636,6 +636,7 @@ export const editarVenta = async (req, res) => {
     monto_total_usd,
     monto_total_bs,
     cantidad_cajas,
+    costo_delivery,
     detalles_actualizados,
     info_pago,
   } = req.body;
@@ -1064,6 +1065,7 @@ export const obtenerPedidosActivos = async (req, res) => {
         v.id_usuario,
         v.fecha_hora,
         v.despacho,
+        v.cantidad_caja,
         v.costo_delivery,
         v.monto_total_usd,
         v.monto_total_bs,

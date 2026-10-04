@@ -151,17 +151,21 @@ export default function OrderEditModal({ pedido = {}, displayNum, onClose }) {
   // Detección inteligente: si el pedido original era para Llevar o Delivery,
   // calcular cajas preexistentes comparando monto_total_usd con la suma de detalles
   const [cajasAgregadas, setCajasAgregadas] = useState(() => {
+    if (safePedido.cantidad_caja !== undefined && safePedido.cantidad_caja !== null) {
+      return Number(safePedido.cantidad_caja) || 0;
+    }
     const despachoOriginal = safePedido.despacho ?? "Local";
     if (DESPACHOS_CON_CAJA.includes(despachoOriginal)) {
       const baseDetallesTotal = safePedidoDetalles.reduce(
         (s, d) => s + (parseFloat(d.monto_total) || 0),
         0,
       );
+      const deliveryCost = parseFloat(safePedido.costo_delivery) || 0;
       const origTotal = parseFloat(safePedido.monto_total_usd) || 0;
       const safeBoxPrice = boxPrice || 1;
       return Math.max(
         0,
-        Math.round((origTotal - baseDetallesTotal) / safeBoxPrice),
+        Math.round((origTotal - baseDetallesTotal - deliveryCost) / safeBoxPrice),
       );
     }
     return 0;
@@ -255,10 +259,15 @@ export default function OrderEditModal({ pedido = {}, displayNum, onClose }) {
     ? cajasAgregadas * boxPrice
     : 0;
 
+  const currentDeliveryCost =
+    localDespacho === "Delivery"
+      ? parseFloat(safePedido.costo_delivery) || 0
+      : 0;
+
   const cajaBloqueHabilitado =
     localDespacho === "Llevar" ||
     (DESPACHOS_CON_CAJA.includes(localDespacho) && cajasAgregadas === 0);
-  const newTotal = totalDetalles + totalCajas;
+  const newTotal = totalDetalles + totalCajas + currentDeliveryCost;
   const diff = newTotal - originalTotal;
 
   const paymentItems = (localDetalles || []).map((item) => ({
@@ -319,6 +328,7 @@ export default function OrderEditModal({ pedido = {}, displayNum, onClose }) {
         monto_total_usd: Number(newTotal.toFixed(2)),
         monto_total_bs: Number((newTotal * (exchangeRate || 0)).toFixed(2)),
         cantidad_cajas: Number(cajasAgregadas) || 0,
+        costo_delivery: currentDeliveryCost,
         detalles_actualizados: detallesParaBackend,
         info_pago: datosPago
           ? {
@@ -490,6 +500,12 @@ export default function OrderEditModal({ pedido = {}, displayNum, onClose }) {
                       ? "Alterna entre consumo en local y para llevar."
                       : "Alterna entre delivery a domicilio y pick up."}
                   </p>
+                  {currentDeliveryCost > 0 && localDespacho === "Delivery" && (
+                    <div className="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+                      <span className="font-semibold text-slate-500">Costo de delivery:</span>
+                      <span className="font-bold text-slate-700">${currentDeliveryCost.toFixed(2)}</span>
+                    </div>
+                  )}
                 </section>
 
                 {/* Observaciones */}
