@@ -5,8 +5,6 @@ import { useApp } from "../context/AppContext";
 import { subscribeToPusher } from "../lib/pusherClient";
 import { usePusherConnection } from "./usePusherConnection";
 
-
-
 const kitchenQueryClients = new Map();
 let stopKitchenSubscriptions = null;
 let kitchenRefreshTimer = null;
@@ -138,6 +136,19 @@ const unsubscribeKitchenEvents = (queryClient) => {
   }
 };
 
+const MAPEO_TIPO_PRODUCTO_A_CATEGORIA = {
+  Pizza: "pizzas",
+  Combo: "combos",
+  Bebida: "drinks",
+};
+
+const categoriaDesdeTipoProducto = (tipoProducto) => {
+  const cat = MAPEO_TIPO_PRODUCTO_A_CATEGORIA[tipoProducto];
+  if (cat) return cat;
+  if (tipoProducto === "Helado") return null;
+  return null;
+};
+
 const adaptVenta = (venta, status) => ({
   id: venta.codigo_orden,
   db_id: venta.id_venta,
@@ -155,7 +166,8 @@ const adaptVenta = (venta, status) => ({
     qty: detalle.cantidad,
     note: detalle.nota,
     size: detalle.categoria_pizza,
-    category: detalle.tipo_producto === "Combo" ? "combos" : "pizzas",
+    category: categoriaDesdeTipoProducto(detalle.tipo_producto),
+    status: detalle.estado_detalle,
     extras: detalle.extras || [],
   })),
 });

@@ -23,8 +23,6 @@ export default function KanbanBoard() {
     ),
   );
 
-  const nonKitchenPendingCount = allPendingOrders.length - pendingOrders.length;
-
   // const pendingOrders = orders
   //   .filter((o) => o.status === 'pending')
   //   .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
