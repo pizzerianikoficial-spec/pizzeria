@@ -39,6 +39,9 @@ import {
   Trophy,
   Star,
   CupSoda,
+  UtensilsCrossed,
+  Bike,
+  Store,
 } from "lucide-react";
 import { useReportes } from "../../hooks/useReportes";
 
@@ -191,6 +194,78 @@ const PAGO_ICONS = {
   },
 };
 
+const DESPACHO_META = {
+  Local: {
+    nombre: "Local",
+    sublabel: "Mesa / Salón",
+    icon: UtensilsCrossed,
+    color: "#3b82f6",
+    badgeCls: "bg-blue-50 text-blue-700 border-blue-200",
+    iconCls: "text-blue-600 bg-blue-50 border-blue-200",
+  },
+  "Para Llevar": {
+    nombre: "Para Llevar",
+    sublabel: "Retiro mostrador",
+    icon: ShoppingBag,
+    color: "#f59e0b",
+    badgeCls: "bg-amber-50 text-amber-700 border-amber-200",
+    iconCls: "text-amber-600 bg-amber-50 border-amber-200",
+  },
+  Delivery: {
+    nombre: "Delivery",
+    sublabel: "A domicilio",
+    icon: Bike,
+    color: "#ef4444",
+    badgeCls: "bg-red-50 text-red-700 border-red-200",
+    iconCls: "text-red-600 bg-red-50 border-red-200",
+  },
+  "Pick Up": {
+    nombre: "Pick Up",
+    sublabel: "Pasa a buscar",
+    icon: Store,
+    color: "#10b981",
+    badgeCls: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    iconCls: "text-emerald-600 bg-emerald-50 border-emerald-200",
+  },
+};
+
+const CustomDespachoTooltip = ({ active, payload }) => {
+  if (active && payload && payload.length) {
+    const item = payload[0].payload;
+    return (
+      <div className="bg-slate-900 border border-slate-700 text-white rounded-xl px-3.5 py-2.5 shadow-2xl backdrop-blur-md min-w-[165px]">
+        <div className="flex items-center gap-2 mb-1.5">
+          <span
+            className="w-2.5 h-2.5 rounded-full shrink-0"
+            style={{ backgroundColor: item.color }}
+          />
+          <p className="text-slate-200 font-bold text-xs">{item.nombre}</p>
+          <span className="text-[10px] text-slate-400 ml-auto font-medium">
+            {item.sublabel}
+          </span>
+        </div>
+        <p className="text-emerald-400 font-mono font-bold text-sm">
+          {fmtUSD(item.total_usd)}
+        </p>
+        <div className="mt-1.5 pt-1.5 border-t border-slate-800 text-[11px] text-slate-300 flex justify-between gap-3">
+          <span>Pedidos:</span>
+          <span className="font-bold text-white">
+            {item.ordenes} ({item.porcentaje_ordenes}%)
+          </span>
+        </div>
+        <div className="text-[11px] text-slate-300 flex justify-between gap-3">
+          <span>Ticket Promedio:</span>
+          <span className="font-bold text-amber-300 font-mono">
+            {fmtUSD(item.ticket_promedio_usd)}
+          </span>
+        </div>
+      </div>
+    );
+  }
+  return null;
+};
+
+
 const CustomTopProductTooltip = ({ active, payload }) => {
   if (active && payload && payload.length) {
     const item = payload[0];
@@ -267,7 +342,9 @@ export default function Reportes() {
     pagos = [],
     tendencia = [],
     topProductos = [],
+    despachos = [],
   } = reportes || {};
+  const [despachoMetric, setDespachoMetric] = useState("usd"); // 'usd' | 'ordenes'
   const loading = sucursalesLoading || reportesLoading;
   const [error, setError] = useState(null);
 
@@ -659,85 +736,187 @@ export default function Reportes() {
           </div>
         </div>
 
-        {/* ── FILA 2 DE GRÁFICOS (PRODUCTOS CON MÁS VENTAS Y DÍAS CON MÁS VENTAS) ── */}
+        {/* ── FILA 2 DE GRÁFICOS (CANALES DE DESPACHO Y DÍAS CON MÁS VENTAS) ── */}
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-          {/* GRÁFICO 3: PRODUCTOS CON MÁS VENTAS (TOP 5) */}
+          {/* GRÁFICO 3: VENTAS POR TIPO DE DESPACHO (CANALES DE VENTA) */}
           <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm p-4 sm:p-5 flex flex-col justify-between">
-            <div className="flex items-center justify-between mb-3.5">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-3.5">
               <div>
                 <h3 className="font-extrabold text-slate-800 text-base flex items-center gap-2">
-                  <Award className="w-4.5 h-4.5 text-amber-500" />
-                  Productos con Más Ventas
+                  <Bike className="w-4.5 h-4.5 text-amber-500" />
+                  Ventas por Canal de Despacho
                 </h3>
                 <p className="text-slate-400 text-xs mt-0.5">
-                  Top 5 productos con mayor volumen de venta
+                  Local, Para Llevar, Delivery y Pick Up
                 </p>
               </div>
-              <span className="text-xs font-black text-amber-800 bg-amber-100/70 border border-amber-200 px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                <Star className="w-3 h-3 text-amber-600 fill-amber-500" />
-                Top 5
-              </span>
+
+              {/* Selector de métrica ($ Monto vs # Pedidos) */}
+              <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200 text-xs font-bold shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setDespachoMetric("usd")}
+                  className={`px-2.5 py-1 rounded-md transition-all ${
+                    despachoMetric === "usd"
+                      ? "bg-white text-slate-800 shadow-2xs font-extrabold"
+                      : "text-slate-500 hover:text-slate-800"
+                  }`}
+                >
+                  $ Monto USD
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDespachoMetric("ordenes")}
+                  className={`px-2.5 py-1 rounded-md transition-all ${
+                    despachoMetric === "ordenes"
+                      ? "bg-white text-slate-800 shadow-2xs font-extrabold"
+                      : "text-slate-500 hover:text-slate-800"
+                  }`}
+                >
+                  # Pedidos
+                </button>
+              </div>
             </div>
 
             {loading ? (
               <div className="h-52 bg-slate-50 rounded-xl animate-pulse" />
-            ) : topProductos.length === 0 ? (
+            ) : despachos.length === 0 ||
+              despachos.every((d) => (d.ordenes || 0) === 0) ? (
               <div className="h-52 flex flex-col items-center justify-center text-slate-400 gap-2">
-                <Award className="w-8 h-8 opacity-30" />
+                <Bike className="w-8 h-8 opacity-30" />
                 <p className="text-xs font-semibold">
-                  Sin productos registrados en este periodo
+                  Sin ventas por despacho en este periodo
                 </p>
               </div>
             ) : (
-              <ResponsiveContainer width="100%" height={210}>
-                <BarChart
-                  data={topProductos.slice(0, 5)}
-                  layout="vertical"
-                  margin={{ top: 5, right: 25, bottom: 0, left: 15 }}
-                >
-                  <defs>
-                    <linearGradient
-                      id="barGradTop5"
-                      x1="0"
-                      y1="0"
-                      x2="1"
-                      y2="0"
-                    >
-                      <stop offset="0%" stopColor="#f59e0b" />
-                      <stop offset="100%" stopColor="#fbbf24" />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    stroke="#f1f5f9"
-                    horizontal={false}
-                  />
-                  <XAxis
-                    type="number"
-                    tick={{ fontSize: 10, fill: "#94a3b8" }}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <YAxis
-                    type="category"
-                    dataKey="producto_nombre"
-                    tick={{ fontSize: 11, fill: "#334155", fontWeight: 700 }}
-                    axisLine={false}
-                    tickLine={false}
-                    width={115}
-                  />
-                  <Tooltip
-                    content={<CustomTopProductTooltip />}
-                    cursor={{ fill: "#f8fafc" }}
-                  />
-                  <Bar
-                    dataKey="cantidad_vendida"
-                    name="Unidades Vendidas"
-                    fill="url(#barGradTop5)"
-                    radius={[0, 8, 8, 0]}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
+              (() => {
+                const totalUsd = despachos.reduce(
+                  (acc, d) => acc + Number(d.total_usd || 0),
+                  0,
+                );
+                const totalOrdenes = despachos.reduce(
+                  (acc, d) => acc + Number(d.ordenes || 0),
+                  0,
+                );
+
+                return (
+                  <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center min-h-[210px]">
+                    {/* Gráfico de Dona interactivo */}
+                    <div className="sm:col-span-5 relative flex items-center justify-center">
+                      <ResponsiveContainer width="100%" height={190}>
+                        <PieChart>
+                          <Pie
+                            data={despachos.filter((d) =>
+                              despachoMetric === "usd"
+                                ? (d.total_usd || 0) > 0
+                                : (d.ordenes || 0) > 0,
+                            )}
+                            dataKey={
+                              despachoMetric === "usd" ? "total_usd" : "ordenes"
+                            }
+                            nameKey="nombre"
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={46}
+                            outerRadius={72}
+                            paddingAngle={3}
+                            strokeWidth={0}
+                          >
+                            {despachos.map((entry, index) => (
+                              <Cell key={index} fill={entry.color} />
+                            ))}
+                          </Pie>
+                          <Tooltip content={<CustomDespachoTooltip />} />
+                        </PieChart>
+                      </ResponsiveContainer>
+
+                      {/* Centro de la dona */}
+                      <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center">
+                        <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider">
+                          {despachoMetric === "usd" ? "Total" : "Pedidos"}
+                        </span>
+                        <span className="text-sm font-black text-slate-800 font-mono">
+                          {despachoMetric === "usd"
+                            ? fmtUSD(totalUsd)
+                            : `${totalOrdenes}`}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Desglose de los 4 canales con barras */}
+                    <div className="sm:col-span-7 flex flex-col justify-center gap-2">
+                      {despachos.map((canal) => {
+                        const meta = DESPACHO_META[canal.tipo] || {
+                          icon: ShoppingBag,
+                          iconCls:
+                            "text-slate-600 bg-slate-100 border-slate-200",
+                          badgeCls:
+                            "bg-slate-100 text-slate-700 border-slate-200",
+                        };
+                        const IconComp = meta.icon;
+                        const currentPct =
+                          despachoMetric === "usd"
+                            ? canal.porcentaje
+                            : canal.porcentaje_ordenes;
+
+                        return (
+                          <div
+                            key={canal.tipo}
+                            className="p-2 rounded-xl bg-slate-50/70 hover:bg-slate-100/70 transition-colors border border-slate-100"
+                          >
+                            <div className="flex items-center justify-between text-xs mb-1.5">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span
+                                  className={`w-6 h-6 rounded-lg flex items-center justify-center border shrink-0 ${meta.iconCls}`}
+                                >
+                                  <IconComp className="w-3.5 h-3.5" />
+                                </span>
+                                <div className="truncate">
+                                  <span className="font-bold text-slate-800 text-xs truncate">
+                                    {canal.nombre}
+                                  </span>
+                                  <span className="text-[10px] text-slate-400 font-medium ml-1.5 hidden md:inline">
+                                    {canal.sublabel}
+                                  </span>
+                                </div>
+                              </div>
+
+                              <div className="text-right shrink-0 flex items-center gap-2">
+                                <div className="text-right">
+                                  <span className="font-mono font-black text-slate-800 text-xs block leading-tight">
+                                    {despachoMetric === "usd"
+                                      ? fmtUSD(canal.total_usd)
+                                      : `${canal.ordenes} ord.`}
+                                  </span>
+                                  <span className="text-[10px] text-slate-400 font-medium block leading-tight">
+                                    {despachoMetric === "usd"
+                                      ? `${canal.ordenes} ${canal.ordenes === 1 ? "pedido" : "pedidos"}`
+                                      : fmtUSD(canal.total_usd)}
+                                  </span>
+                                </div>
+                                <span className="text-[11px] font-black text-slate-600 min-w-[38px] text-right">
+                                  {currentPct}%
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Barra de progreso */}
+                            <div className="w-full bg-slate-200/70 rounded-full h-1.5 overflow-hidden">
+                              <div
+                                className="h-full rounded-full transition-all duration-300"
+                                style={{
+                                  width: `${Math.max(currentPct > 0 ? 3 : 0, currentPct)}%`,
+                                  backgroundColor: canal.color,
+                                }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })()
             )}
           </div>
 

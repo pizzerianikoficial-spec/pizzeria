@@ -67,9 +67,10 @@ export function useReportes({ sucursalId, periodo, fecha, modulo }) {
         api.get("/reportes/pagos", { params }),
         api.get("/reportes/tendencia", { params }),
         api.get("/reportes/top-productos", { params }),
+        api.get("/reportes/despachos", { params }),
       ]);
 
-      const [resumen, pagos, tendencia, topProductos] = requests;
+      const [resumen, pagos, tendencia, topProductos, despachos] = requests;
 
       return {
         resumen:
@@ -89,6 +90,14 @@ export function useReportes({ sucursalId, periodo, fecha, modulo }) {
           topProductos.status === "fulfilled"
             ? topProductos.value.data.topProductos || []
             : [],
+        despachos:
+          despachos.status === "fulfilled"
+            ? despachos.value.data.despachos || []
+            : [],
+        totalesDespacho:
+          despachos.status === "fulfilled"
+            ? despachos.value.data.totales || null
+            : null,
         hasError: requests.some((request) => request.status === "rejected"),
       };
     },

@@ -344,3 +344,166 @@ export const obtenerTopProductosReporte = async (req, res) => {
     return res.status(500).json({ success: false, mensaje: "Error interno" });
   }
 };
+
+// ─── Despachos / Canales de Venta ──────────────────────────────────────────
+export const obtenerDespachosReporte = async (req, res) => {
+  const { id_sucursal, periodo = "mes", fecha, modulo = "todos" } = req.query;
+
+  try {
+    const { conditionVentas, params } = buildDateRange(periodo, fecha);
+    const branchVentas = id_sucursal ? `AND v.id_sucursal = ?` : "";
+    const branchParams = id_sucursal ? [Number(id_sucursal)] : [];
+
+    let rows = [];
+
+    if (modulo === "heladeria" || modulo === "pizzeria") {
+      const filter =
+        modulo === "heladeria"
+          ? "AND vd.tipo_producto = 'Helado'"
+          : "AND vd.tipo_producto != 'Helado'";
+
+      rows = await queryRows(
+        `SELECT
+           CASE 
+             WHEN TRIM(COALESCE(v.despacho, '')) = '' THEN 'Otros'
+             WHEN UPPER(v.despacho) LIKE '%LOCAL%' THEN 'Local'
+             WHEN UPPER(v.despacho) LIKE '%LLEVAR%' THEN 'Para Llevar'
+             WHEN UPPER(v.despacho) LIKE '%DELIVERY%' THEN 'Delivery'
+             WHEN UPPER(v.despacho) LIKE '%PICK%' THEN 'Pick Up'
+             ELSE v.despacho
+           END AS tipo_despacho,
+           COUNT(DISTINCT v.id_venta)       AS ordenes,
+           IFNULL(SUM(vd.monto_total), 0)    AS total_usd
+         FROM venta_detalle vd
+         INNER JOIN ventas v ON v.id_venta = vd.id_venta
+         WHERE ${conditionVentas} ${branchVentas} AND v.estado != 'Reembolsado' ${filter}
+         GROUP BY tipo_despacho
+         ORDER BY total_usd DESC`,
+        [...params, ...branchParams],
+      );
+    } else {
+      rows = await queryRows(
+        `SELECT
+           CASE 
+             WHEN TRIM(COALESCE(v.despacho, '')) = '' THEN 'Otros'
+             WHEN UPPER(v.despacho) LIKE '%LOCAL%' THEN 'Local'
+             WHEN UPPER(v.despacho) LIKE '%LLEVAR%' THEN 'Para Llevar'
+             WHEN UPPER(v.despacho) LIKE '%DELIVERY%' THEN 'Delivery'
+             WHEN UPPER(v.despacho) LIKE '%PICK%' THEN 'Pick Up'
+             ELSE v.despacho
+           END AS tipo_despacho,
+           COUNT(*)                          AS ordenes,
+           IFNULL(SUM(v.monto_total_usd), 0) AS total_usd
+         FROM ventas v
+         WHERE ${conditionVentas} ${branchVentas} AND v.estado != 'Reembolsado'
+         GROUP BY tipo_despacho
+         ORDER BY total_usd DESC`,
+        [...params, ...branchParams],
+      );
+    }
+
+    const CANALES_BASE = [
+      {
+        tipo: "Local",
+        nombre: "Local",
+        sublabel: "Mesa / Salón",
+        color: "#3b82f6",
+      },
+      {
+        tipo: "Para Llevar",
+        nombre: "Para Llevar",
+        sublabel: "Retiro mostrador",
+        color: "#f59e0b",
+      },
+      {
+        tipo: "Delivery",
+        nombre: "Delivery",
+        sublabel: "A domicilio",
+        color: "#ef4444",
+      },
+      {
+        tipo: "Pick Up",
+        nombre: "Pick Up",
+        sublabel: "Pasa a buscar",
+        color: "#10b981",
+      },
+    ];
+
+    const mapRows = new Map();
+    rows.forEach((r) => {
+      mapRows.set(r.tipo_despacho, {
+        ordenes: Number(r.ordenes || 0),
+        total_usd: Number(r.total_usd || 0),
+      });
+    });
+
+    const totalGeneralUsd = rows.reduce(
+      (acc, r) => acc + Number(r.total_usd || 0),
+      0,
+    );
+    const totalGeneralOrdenes = rows.reduce(
+      (acc, r) => acc + Number(r.ordenes || 0),
+      0,
+    );
+
+    const despachos = CANALES_BASE.map((c) => {
+      const data = mapRows.get(c.tipo) || { ordenes: 0, total_usd: 0 };
+      const pctUsd =
+        totalGeneralUsd > 0 ? (data.total_usd / totalGeneralUsd) * 100 : 0;
+      const pctOrdenes =
+        totalGeneralOrdenes > 0
+          ? (data.ordenes / totalGeneralOrdenes) * 100
+          : 0;
+      const ticketPromedio =
+        data.ordenes > 0 ? data.total_usd / data.ordenes : 0;
+
+      return {
+        ...c,
+        ordenes: data.ordenes,
+        total_usd: data.total_usd,
+        ticket_promedio_usd: Number(ticketPromedio.toFixed(2)),
+        porcentaje: Number(pctUsd.toFixed(1)),
+        porcentaje_ordenes: Number(pctOrdenes.toFixed(1)),
+      };
+    });
+
+    // Si existen ventas con otros tipos de despacho no contemplados
+    rows.forEach((r) => {
+      const existsInBase = CANALES_BASE.some((c) => c.tipo === r.tipo_despacho);
+      if (!existsInBase && (Number(r.ordenes) > 0 || Number(r.total_usd) > 0)) {
+        const totalUsd = Number(r.total_usd || 0);
+        const ordenes = Number(r.ordenes || 0);
+        const pctUsd =
+          totalGeneralUsd > 0 ? (totalUsd / totalGeneralUsd) * 100 : 0;
+        const pctOrdenes =
+          totalGeneralOrdenes > 0 ? (ordenes / totalGeneralOrdenes) * 100 : 0;
+        despachos.push({
+          tipo: r.tipo_despacho,
+          nombre: r.tipo_despacho,
+          sublabel: "Otro canal",
+          color: "#94a3b8",
+          ordenes,
+          total_usd: totalUsd,
+          ticket_promedio_usd: Number(
+            (ordenes > 0 ? totalUsd / ordenes : 0).toFixed(2),
+          ),
+          porcentaje: Number(pctUsd.toFixed(1)),
+          porcentaje_ordenes: Number(pctOrdenes.toFixed(1)),
+        });
+      }
+    });
+
+    return res.json({
+      success: true,
+      despachos,
+      totales: {
+        total_usd: totalGeneralUsd,
+        total_ordenes: totalGeneralOrdenes,
+      },
+    });
+  } catch (error) {
+    console.error("Error en despachos reporte:", error);
+    return res.status(500).json({ success: false, mensaje: "Error interno" });
+  }
+};
+
