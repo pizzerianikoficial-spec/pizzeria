@@ -427,6 +427,7 @@ CREATE TABLE `ventas` (
   `monto_total_bs` float NOT NULL,
   `despacho` enum('Local','Llevar','Delivery','Pick Up') NOT NULL,
   `estado` enum('Completado','Pendiente','Rechazado','Cerrado','Reembolsado') NOT NULL,
+  `costo_delivery` float NOT NULL DEFAULT 0,
   `id_sucursal` int(11) NOT NULL DEFAULT 1
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_spanish_ci;
 

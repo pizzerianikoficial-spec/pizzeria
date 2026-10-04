@@ -255,6 +255,7 @@ export default function DeliveryCheckoutModal({ onClose }) {
         monto_cajas_bs: Number(
           (boxesTotalUSD * (exchangeRate || 0)).toFixed(2),
         ),
+        costo_delivery: Number(currentOrder.deliveryCostUSD || 0),
         pagos: paymentsInternal.map((payment) => {
           const isUSD = payment.currency === "USD";
           const isBs = payment.currency === "Bs";
@@ -325,6 +326,7 @@ export default function DeliveryCheckoutModal({ onClose }) {
             precio_caja_usd: payload.precio_caja_usd,
             monto_cajas_usd: payload.monto_cajas_usd,
             monto_cajas_bs: payload.monto_cajas_bs,
+            costo_delivery: Number(currentOrder.deliveryCostUSD || 0),
             pagos: payload.pagos.slice(currentOrder.payments?.length || 0),
           }
         : payload;
@@ -459,6 +461,11 @@ export default function DeliveryCheckoutModal({ onClose }) {
                       {currency === "USD"
                         ? `≈ Bs. ${(totalToUse * exchangeRate).toFixed(2)}`
                         : `≈ $${totalToUse.toFixed(2)}`}
+                    </div>
+                  )}
+                  {Number(currentOrder.deliveryCostUSD) > 0 && (
+                    <div className="text-pizza-red text-[11px] font-bold mt-1">
+                      Incluye Costo Delivery: ${Number(currentOrder.deliveryCostUSD).toFixed(2)}
                     </div>
                   )}
                 </div>
@@ -656,6 +663,16 @@ export default function DeliveryCheckoutModal({ onClose }) {
                       </span>
                     </div>
                   ))}
+                  {Number(currentOrder.deliveryCostUSD) > 0 && (
+                    <div className="flex justify-between text-xs font-bold text-slate-800 bg-red-50/70 p-1.5 rounded">
+                      <span>Costo de Delivery:</span>
+                      <span>
+                        {currency === "Bs"
+                          ? `Bs. ${(Number(currentOrder.deliveryCostUSD) * (exchangeRate || 0)).toFixed(2)}`
+                          : `$${Number(currentOrder.deliveryCostUSD).toFixed(2)}`}
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Total */}

@@ -25,6 +25,7 @@ export const procesarVenta = async (req, res) => {
     monto_total_usd,
     monto_total_bs,
     cantidad_cajas = 0,
+    costo_delivery = 0,
     pagos,
     detalles,
   } = req.body;
@@ -55,8 +56,8 @@ export const procesarVenta = async (req, res) => {
 
     const resultVenta = await tx.execute({
       sql: `INSERT INTO ventas 
-      (id_cliente, id_usuario, id_delivery, despacho, estado, fecha_hora, tasa_cambio, monto_total_usd, monto_total_bs, cantidad_caja, id_sucursal) 
-      VALUES (?, ?, ?, ?, 'Completado', datetime('now', '-4 hours'), ?, ?, ?, ?, ?)`,
+      (id_cliente, id_usuario, id_delivery, despacho, estado, fecha_hora, tasa_cambio, monto_total_usd, monto_total_bs, cantidad_caja, id_sucursal, costo_delivery) 
+      VALUES (?, ?, ?, ?, 'Completado', datetime('now', '-4 hours'), ?, ?, ?, ?, ?, ?)`,
       args: [
         clienteId,
         finalUserId,
@@ -67,6 +68,7 @@ export const procesarVenta = async (req, res) => {
         monto_total_bs,
         Number(cantidad_cajas) || 0,
         id_sucursal,
+        Number(costo_delivery) || 0,
       ],
     });
 
@@ -163,6 +165,7 @@ export const registrarVentaPagadaEnEspera = async (req, res) => {
     monto_total_usd,
     monto_total_bs,
     cantidad_cajas = 0,
+    costo_delivery = 0,
     pagos = [],
     detalles = [],
   } = req.body;
@@ -200,8 +203,8 @@ export const registrarVentaPagadaEnEspera = async (req, res) => {
 
     const resultVenta = await tx.execute({
       sql: `INSERT INTO ventas
-       (id_cliente, id_usuario, id_delivery, despacho, estado, fecha_hora, tasa_cambio, monto_total_usd, monto_total_bs, cantidad_caja, id_sucursal)
-      VALUES (?, ?, ?, ?, 'Completado', datetime('now', '-4 hours'), ?, ?, ?, ?, ?)`,
+       (id_cliente, id_usuario, id_delivery, despacho, estado, fecha_hora, tasa_cambio, monto_total_usd, monto_total_bs, cantidad_caja, id_sucursal, costo_delivery)
+      VALUES (?, ?, ?, ?, 'Completado', datetime('now', '-4 hours'), ?, ?, ?, ?, ?, ?)`,
       args: [
         clienteId,
         finalUserId,
@@ -212,6 +215,7 @@ export const registrarVentaPagadaEnEspera = async (req, res) => {
         monto_total_bs || 0,
         Number(cantidad_cajas) || 0,
         id_sucursal,
+        Number(costo_delivery) || 0,
       ],
     });
 
@@ -321,6 +325,7 @@ export const registrarPedidoPendiente = async (req, res) => {
     monto_total_bs,
     monto_pendiente,
     cantidad_cajas = 0,
+    costo_delivery = 0,
     pagos = [],
     detalles = [],
   } = req.body;
@@ -367,8 +372,8 @@ export const registrarPedidoPendiente = async (req, res) => {
 
     const resultVenta = await tx.execute({
       sql: `INSERT INTO ventas
-       (id_cliente, id_usuario, id_delivery, despacho, estado, fecha_hora, tasa_cambio, monto_total_usd, monto_total_bs, cantidad_caja, id_sucursal)
-      VALUES (?, ?, ?, ?, 'Pendiente', datetime('now', '-4 hours'), ?, ?, ?, ?, ?)`,
+       (id_cliente, id_usuario, id_delivery, despacho, estado, fecha_hora, tasa_cambio, monto_total_usd, monto_total_bs, cantidad_caja, id_sucursal, costo_delivery)
+      VALUES (?, ?, ?, ?, 'Pendiente', datetime('now', '-4 hours'), ?, ?, ?, ?, ?, ?)`,
       args: [
         clienteId,
         id_usuario,
@@ -379,6 +384,7 @@ export const registrarPedidoPendiente = async (req, res) => {
         monto_total_bs || 0,
         Number(cantidad_cajas) || 0,
         id_sucursal,
+        Number(costo_delivery) || 0,
       ],
     });
 
@@ -487,6 +493,7 @@ export const completarVentaPendiente = async (req, res) => {
     monto_total_usd,
     monto_total_bs,
     cantidad_cajas = 0,
+    costo_delivery,
   } = req.body;
   if (!Array.isArray(detalles) || !validarDetallesNuevos(detalles)) {
     return res.status(400).json({
@@ -573,13 +580,14 @@ export const completarVentaPendiente = async (req, res) => {
     const estadoNotificacionesListo = "Listo";
     await tx.execute({
       sql: `UPDATE ventas
-       SET id_usuario = ?, estado = 'Completado', monto_total_usd = ?, monto_total_bs = ?, cantidad_caja = ?
+       SET id_usuario = ?, estado = 'Completado', monto_total_usd = ?, monto_total_bs = ?, cantidad_caja = ?, costo_delivery = COALESCE(?, costo_delivery)
        WHERE id_venta = ?`,
       args: [
         id_usuario || 1,
         monto_total_usd || 0,
         monto_total_bs || 0,
         Number(cantidad_cajas) || 0,
+        costo_delivery !== undefined ? Number(costo_delivery) : null,
         id_venta,
       ],
     });
@@ -676,6 +684,11 @@ export const editarVenta = async (req, res) => {
     if (cantidad_cajas != null) {
       updates.push("cantidad_caja = ?");
       params.push(Number(cantidad_cajas) || 0);
+    }
+
+    if (costo_delivery != null) {
+      updates.push("costo_delivery = ?");
+      params.push(Number(costo_delivery) || 0);
     }
 
     if (updates.length > 0) {
@@ -982,6 +995,7 @@ export const obtenerVentasHoy = async (req, res) => {
         v.id_usuario,
         v.monto_total_usd,
         v.monto_total_bs,
+        v.costo_delivery,
         v.despacho,
         v.fecha_hora,
         c.nombre AS nombre_cliente,
@@ -1047,6 +1061,7 @@ export const obtenerPedidosActivos = async (req, res) => {
         v.id_usuario,
         v.fecha_hora,
         v.despacho,
+        v.costo_delivery,
         v.monto_total_usd,
         v.monto_total_bs,
         v.estado,
@@ -1088,8 +1103,8 @@ export const obtenerPedidosActivos = async (req, res) => {
       idsVentas.length === 0
         ? []
         : (
-            await db.execute({
-              sql: `SELECT 
+          await db.execute({
+            sql: `SELECT 
             vd.id_venta,
             vd.id_detalle,
             vd.tipo_producto,
@@ -1106,23 +1121,23 @@ export const obtenerPedidosActivos = async (req, res) => {
           LEFT JOIN heladeria h  ON h.id_heladeria  = vd.id_producto_origen AND vd.tipo_producto = 'Helado'
           LEFT JOIN combos    co ON co.id_combo     = vd.id_producto_origen AND vd.tipo_producto = 'Combo'
           WHERE vd.id_venta IN (${idsVentas.map(() => "?").join(", ")})`,
-              args: idsVentas,
-            })
-          ).rows;
+            args: idsVentas,
+          })
+        ).rows;
 
     const idsDetalles = detallesBatch.map((d) => d.id_detalle);
     const extrasBatch =
       idsDetalles.length === 0
         ? []
         : (
-            await db.execute({
-              sql: `SELECT dve.id_detalle, e.id_extras AS id, e.nombre AS name, e.precio AS price
+          await db.execute({
+            sql: `SELECT dve.id_detalle, e.id_extras AS id, e.nombre AS name, e.precio AS price
                FROM detalle_venta_extras dve
                JOIN extras e ON e.id_extras = dve.id_extra
                WHERE dve.id_detalle IN (${idsDetalles.map(() => "?").join(", ")})`,
-              args: idsDetalles,
-            })
-          ).rows;
+            args: idsDetalles,
+          })
+        ).rows;
 
     const extrasPorDetalle = new Map();
     for (const extra of extrasBatch) {
@@ -1149,8 +1164,8 @@ export const obtenerPedidosActivos = async (req, res) => {
       );
       const telefonoLimpio =
         !venta.telefono_cliente ||
-        venta.telefono_cliente === 0 ||
-        venta.telefono_cliente === "0"
+          venta.telefono_cliente === 0 ||
+          venta.telefono_cliente === "0"
           ? null
           : venta.telefono_cliente;
 

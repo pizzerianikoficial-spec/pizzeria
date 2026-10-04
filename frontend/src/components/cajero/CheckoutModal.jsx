@@ -266,12 +266,6 @@ export default function CheckoutModal({ onClose }) {
   const [showPaymentEntry, setShowPaymentEntry] = useState(false);
 
   const handleAddFromModal = (amountUSD) => {
-    const deliveryId = normalizeId(currentOrder.deliveryId);
-    if (mapOrderTypeToApiValue(orderType) === "Delivery" && !deliveryId) {
-      setError("Debe buscar y seleccionar un repartidor antes de continuar.");
-      return;
-    }
-
     setPaymentsInternal((prev) => [
       ...prev,
       {
@@ -297,11 +291,6 @@ export default function CheckoutModal({ onClose }) {
     const amountUSD = parseToUSD(amountInput);
     if (isNaN(amountUSD) || amountUSD <= 0) {
       setError("Monto inválido");
-      return;
-    }
-    const deliveryId = normalizeId(currentOrder.deliveryId);
-    if (mapOrderTypeToApiValue(orderType) === "Delivery" && !deliveryId) {
-      setError("Debe buscar y seleccionar un repartidor antes de continuar.");
       return;
     }
     if (amountUSD > remainingLocalUSD + 0.001) {
@@ -363,13 +352,6 @@ export default function CheckoutModal({ onClose }) {
     const deliveryIdReal =
       despacho === "Delivery" ? normalizeId(currentOrder.deliveryId) : null;
 
-    if (despacho === "Delivery" && !deliveryIdReal) {
-      setError(
-        "Debe seleccionar un repartidor válido para procesar esta venta.",
-      );
-      return;
-    }
-
     let payload;
     try {
       payload = {
@@ -386,6 +368,10 @@ export default function CheckoutModal({ onClose }) {
         monto_cajas_bs: Number(
           (boxesTotalUSD * (exchangeRate || 0)).toFixed(2),
         ),
+        costo_delivery:
+          despacho === "Delivery"
+            ? Number(currentOrder.deliveryCostUSD || 0)
+            : 0,
         pagos: paymentsInternal.map((payment) => {
           const isUSD = payment.currency === "USD";
           const isBs = payment.currency === "Bs";
@@ -558,6 +544,11 @@ export default function CheckoutModal({ onClose }) {
                   <div className="text-slate-800 font-extrabold text-lg">
                     {formatDisplay(totalToUse)}
                   </div>
+                  {(orderType === "delivery" || ctxOrderType === "delivery") && Number(currentOrder.deliveryCostUSD) > 0 && (
+                    <span className="text-[11px] text-slate-500 font-medium block">
+                      (Incluye delivery: ${Number(currentOrder.deliveryCostUSD).toFixed(2)})
+                    </span>
+                  )}
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="flex gap-2">
@@ -761,6 +752,16 @@ export default function CheckoutModal({ onClose }) {
                       </span>
                     </div>
                   ))}
+                  {(orderType === "delivery" || ctxOrderType === "delivery") && Number(currentOrder.deliveryCostUSD) > 0 && (
+                    <div className="flex justify-between font-semibold text-slate-700 bg-red-50/60 p-1 rounded">
+                      <span>Costo de Delivery</span>
+                      <span>
+                        {currency === "Bs"
+                          ? `Bs. ${(Number(currentOrder.deliveryCostUSD) * (exchangeRate || 0)).toFixed(2)}`
+                          : `$${Number(currentOrder.deliveryCostUSD).toFixed(2)}`}
+                      </span>
+                    </div>
+                  )}
                   {/* {soldBoxes > 0 && (
                     <div className="flex justify-between font-semibold">
                       <span>

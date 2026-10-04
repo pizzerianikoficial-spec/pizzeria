@@ -7,7 +7,7 @@ const consultarNotificacionesPendientesBD = async () => {
             n.monto_restante, n.estado AS estado_notificacion, n.fecha_hora,
             c.nombre AS nombre_cliente, c.cedula AS cedula_cliente,
             c.telefono AS telefono_cliente,
-            v.despacho, d.nombre AS nombre_delivery, d.digitos AS digitos_delivery,
+            v.despacho, v.costo_delivery, d.nombre AS nombre_delivery, d.digitos AS digitos_delivery,
             CASE WHEN n.estado = 'EnEspera' THEN 1 ELSE 0 END AS en_espera_horno,
             COALESCE(SUM(vd.cantidad), 0) AS cantidad_items,
             GROUP_CONCAT(
@@ -29,7 +29,7 @@ const consultarNotificacionesPendientesBD = async () => {
        AND DATE(n.fecha_hora) = DATE('now', '-4 hours')
      GROUP BY n.id_notificacion, n.id_venta, n.id_cliente,
               n.monto_restante, n.estado, n.fecha_hora, c.nombre, c.cedula,
-              c.telefono, v.despacho, d.nombre, d.digitos
+              c.telefono, v.despacho, v.costo_delivery, d.nombre, d.digitos
       ORDER BY n.fecha_hora DESC`,
   });
   return result.rows;
@@ -50,7 +50,7 @@ export const obtenerNotificacionPendiente = async (req, res) => {
   try {
     const ventasResult = await db.execute({
       sql: `SELECT n.id_notificacion, n.id_venta, n.id_cliente, n.monto_restante,
-              v.monto_total_usd, v.monto_total_bs, v.tasa_cambio, v.despacho,
+              v.monto_total_usd, v.monto_total_bs, v.costo_delivery, v.tasa_cambio, v.despacho,
               v.id_delivery, c.id_cliente AS cliente_id, c.nombre AS nombre_cliente,
               c.cedula AS cedula_cliente, c.telefono AS telefono_cliente
        FROM notificaciones n

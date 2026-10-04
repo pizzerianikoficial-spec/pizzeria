@@ -68,6 +68,10 @@ const initialState = {
     customer: null, // { id?, name, cedula, phone? }
     phoneLastDigits: "", // últimos 4 dígitos del teléfono (delivery)
     deliveryId: null,
+    deliveryCostUSD: 0,
+    deliveryCostBs: 0,
+    deliveryCostCurrency: "USD",
+    deliveryCostRaw: "",
   },
 
   // Customers
@@ -291,6 +295,10 @@ function reducer(state, action) {
           customer: null,
           phoneLastDigits: "",
           deliveryId: null,
+          deliveryCostUSD: 0,
+          deliveryCostBs: 0,
+          deliveryCostCurrency: "USD",
+          deliveryCostRaw: "",
         },
       };
 
@@ -305,6 +313,10 @@ function reducer(state, action) {
         phoneLastDigits,
         deliveryId,
         includesBox,
+        deliveryCostUSD,
+        deliveryCostCurrency,
+        deliveryCostBs,
+        deliveryCostRaw,
       } = action.payload;
       let items = state.currentOrder.items;
       if (!BOX_ORDER_TYPES.has(orderType) || includesBox === false) {
@@ -328,6 +340,39 @@ function reducer(state, action) {
             typeof deliveryId === "object" && deliveryId !== null
               ? deliveryId.id ?? deliveryId.id_delivery ?? null
               : Number(deliveryId) || null,
+          deliveryCostUSD:
+            orderType === "delivery"
+              ? Number(deliveryCostUSD ?? state.currentOrder.deliveryCostUSD ?? 0)
+              : 0,
+          deliveryCostBs:
+            orderType === "delivery"
+              ? Number(deliveryCostBs ?? state.currentOrder.deliveryCostBs ?? 0)
+              : 0,
+          deliveryCostCurrency:
+            deliveryCostCurrency ?? state.currentOrder.deliveryCostCurrency ?? "USD",
+          deliveryCostRaw:
+            orderType === "delivery"
+              ? (deliveryCostRaw ?? state.currentOrder.deliveryCostRaw ?? "")
+              : "",
+        },
+      };
+    }
+
+    case "SET_DELIVERY_COST": {
+      const {
+        deliveryCostUSD = 0,
+        deliveryCostBs = 0,
+        deliveryCostCurrency = "USD",
+        deliveryCostRaw = "",
+      } = action.payload;
+      return {
+        ...state,
+        currentOrder: {
+          ...state.currentOrder,
+          deliveryCostUSD: Number(deliveryCostUSD || 0),
+          deliveryCostBs: Number(deliveryCostBs || 0),
+          deliveryCostCurrency,
+          deliveryCostRaw,
         },
       };
     }
@@ -520,7 +565,11 @@ export function AppProvider({ children }) {
     (sum, i) => sum + Number(i.price || 0) * Number(i.qty || 0),
     0,
   ); // informativo: NO se suma al total (ya está en subtotal)
-  const total = subtotal + tax;
+  const deliveryCostUSD =
+    state.currentOrder.orderType === "delivery"
+      ? Number(state.currentOrder.deliveryCostUSD || 0)
+      : 0;
+  const total = subtotal + tax + deliveryCostUSD;
 
   // currentOrder con boxQty / includesBox calculados (lo leen otros componentes)
   const currentOrder = useMemo(
@@ -612,19 +661,45 @@ export function AppProvider({ children }) {
       advancePaymentMethod,
       advanceCurrency,
       includesBox,
-    ) =>
+      deliveryCostUSD,
+      deliveryCostCurrency,
+      deliveryCostBs,
+      deliveryCostRaw,
+    ) => {
+      if (typeof orderType === "object" && orderType !== null) {
+        dispatch({ type: "SET_ORDER_TYPE", payload: orderType });
+      } else {
+        dispatch({
+          type: "SET_ORDER_TYPE",
+          payload: {
+            orderType,
+            paymentStatus,
+            advanceAmount,
+            customer,
+            phoneLastDigits,
+            deliveryId,
+            advancePaymentMethod,
+            advanceCurrency,
+            includesBox,
+            deliveryCostUSD,
+            deliveryCostCurrency,
+            deliveryCostBs,
+            deliveryCostRaw,
+          },
+        });
+      }
+    },
+    [],
+  );
+  const setDeliveryCost = useCallback(
+    (deliveryCostUSD, deliveryCostBs, deliveryCostCurrency, deliveryCostRaw) =>
       dispatch({
-        type: "SET_ORDER_TYPE",
+        type: "SET_DELIVERY_COST",
         payload: {
-          orderType,
-          paymentStatus,
-          advanceAmount,
-          customer,
-          phoneLastDigits,
-          deliveryId,
-          advancePaymentMethod,
-          advanceCurrency,
-          includesBox,
+          deliveryCostUSD,
+          deliveryCostBs,
+          deliveryCostCurrency,
+          deliveryCostRaw,
         },
       }),
     [],
@@ -727,6 +802,7 @@ export function AppProvider({ children }) {
       clearCart,
       setIncludesBox,
       setOrderType,
+      setDeliveryCost,
       addPayment,
       loadPendingOrder,
       confirmSale,
@@ -757,6 +833,7 @@ export function AppProvider({ children }) {
       clearCart,
       setIncludesBox,
       setOrderType,
+      setDeliveryCost,
       addPayment,
       loadPendingOrder,
       confirmSale,

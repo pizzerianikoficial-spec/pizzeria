@@ -175,18 +175,21 @@ export default function OrderTypeModal({
   const [isSearchingDelivery, setIsSearchingDelivery] = useState(false);
   const [isSearchingCustomer, setIsSearchingCustomer] = useState(false);
 
-  // Estados para el flujo de Delivery y Pickup (solo registro directo)
-  const [deliveryName, setDeliveryName] = useState("");
-  const [deliveryDigits, setDeliveryDigits] = useState("");
-  const [foundDelivery, setFoundDelivery] = useState(null);
-  const [deliveryLookupDone, setDeliveryLookupDone] = useState(false);
-  const [showDeliveryAliasPrompt, setShowDeliveryAliasPrompt] = useState(false);
-  const [wantsDeliveryAlias, setWantsDeliveryAlias] = useState(null);
-  const [deliveryAlias, setDeliveryAlias] = useState("");
+  // Estados para el flujo de Costo de Delivery
+  const [deliveryCostCurrency, setDeliveryCostCurrency] = useState(
+    currentOrder.deliveryCostCurrency || "USD",
+  );
+  const [deliveryCost, setDeliveryCost] = useState(
+    currentOrder.deliveryCostRaw !== undefined && currentOrder.deliveryCostRaw !== ""
+      ? String(currentOrder.deliveryCostRaw)
+      : currentOrder.deliveryCostUSD
+        ? String(currentOrder.deliveryCostUSD)
+        : "",
+  );
 
   const needsPaymentInfo =
     selectedType === "delivery" || selectedType === "pickup";
-  const needsDeliveryDigits = selectedType === "delivery";
+  const needsDeliveryCost = selectedType === "delivery";
   const needsCustomerStep =
     selectedType === "local" ||
     selectedType === "takeaway" ||
@@ -199,15 +202,29 @@ export default function OrderTypeModal({
       ? advanceRaw / exchangeRate
       : advanceRaw;
 
+  const deliveryCostRawNum = parseFloat(deliveryCost) || 0;
+  const deliveryCostUSD =
+    needsDeliveryCost
+      ? deliveryCostCurrency === "Bs" && exchangeRate > 0
+        ? deliveryCostRawNum / exchangeRate
+        : deliveryCostRawNum
+      : 0;
+  const deliveryCostBs =
+    needsDeliveryCost
+      ? deliveryCostCurrency === "USD"
+        ? deliveryCostRawNum * (exchangeRate || 0)
+        : deliveryCostRawNum
+      : 0;
+
   const pendingTotal = pendingProduct?.product
     ? Number(pendingProduct.product.price || 0) *
-      (pendingProduct.size === "Mediana"
-        ? 1.3
-        : pendingProduct.size === "Familiar"
-          ? 1.6
-          : 1)
+    (pendingProduct.size === "Mediana"
+      ? 1.3
+      : pendingProduct.size === "Familiar"
+        ? 1.6
+        : 1)
     : 0;
-  const orderMaxUSD = Number(total) + pendingTotal;
+  const orderMaxUSD = Number(total) + pendingTotal + deliveryCostUSD;
   const maxAbonoUSD = Math.max(0, orderMaxUSD - 0.01);
 
   // Paso 2 - Cliente
@@ -239,47 +256,11 @@ export default function OrderTypeModal({
     setAdvanceAmount("");
     setAdvancePaymentMethod(null);
     setShowAdvancePaymentEntry(false);
-    setDeliveryName("");
-    setDeliveryDigits("");
-    setFoundDelivery(null);
-    setDeliveryLookupDone(false);
-    setShowDeliveryAliasPrompt(false);
-    setWantsDeliveryAlias(null);
-    setDeliveryAlias("");
+    setDeliveryCost("");
+    setDeliveryCostCurrency("USD");
     setShowAliasPrompt(false);
     setWantsAlias(null);
     setAlias("");
-  };
-
-  const handleDeliverySearch = async () => {
-    if (isSearchingDelivery) return;
-    const digits = deliveryDigits.trim();
-    if (digits.length !== 4) return;
-
-    setIsSearchingDelivery(true);
-    try {
-      const { data } = await axios.get(
-        `${API_BASE}/buscar-delivery?q=${digits}`,
-      );
-
-      setDeliveryLookupDone(true);
-      if (data.success && data.delivery) {
-        setFoundDelivery(data.delivery);
-        setShowDeliveryAliasPrompt(false);
-        setWantsDeliveryAlias(null);
-        setDeliveryAlias("");
-      } else {
-        setFoundDelivery(null);
-        setShowDeliveryAliasPrompt(true);
-        setWantsDeliveryAlias(null);
-        setDeliveryAlias("");
-      }
-    } catch (error) {
-      console.error("Error buscando el delivery:", error);
-      setDeliveryLookupDone(false);
-    } finally {
-      setIsSearchingDelivery(false);
-    }
   };
 
   // ── Buscar Cliente (Refactorizado a Axios) ──
@@ -383,14 +364,14 @@ export default function OrderTypeModal({
       ? currentOrder.items
       : pendingProduct
         ? [
-            {
-              ...pendingProduct.product,
-              qty: 1,
-              size: pendingProduct.size || null,
-              extras: [],
-              note: "",
-            },
-          ]
+          {
+            ...pendingProduct.product,
+            qty: 1,
+            size: pendingProduct.size || null,
+            extras: [],
+            note: "",
+          },
+        ]
         : [];
 
     return items.map((item) => {
@@ -410,13 +391,14 @@ export default function OrderTypeModal({
     });
   };
 
-  const registerPendingOrder = async (finalCustomer, finalDelivery) => {
+  const registerPendingOrder = async (finalCustomer) => {
     const despacho = mapOrderTypeToApiValue(selectedType);
     const productsTotal = getPendingDetails().reduce(
       (sum, detail) => sum + detail.monto_total,
       0,
     );
-    const total = productsTotal;
+    const finalDeliveryCostUSD = selectedType === "delivery" ? deliveryCostUSD : 0;
+    const total = productsTotal + finalDeliveryCostUSD;
     const isPartial = paymentStatus === "partial";
     const paymentMethod = mapPaymentMethodToApi(advancePaymentMethod?.id);
     const paymentAmountBs = advanceUSD * (exchangeRate || 0);
@@ -428,10 +410,7 @@ export default function OrderTypeModal({
           finalCustomer?.id ?? finalCustomer?.id_cliente ?? 1,
         ),
         id_usuario: currentUser?.id || 1,
-        id_delivery:
-          selectedType === "delivery"
-            ? Number(finalDelivery?.id ?? finalDelivery?.id_delivery) || null
-            : null,
+        id_delivery: null,
         despacho,
         tasa_cambio: Number((exchangeRate || 0).toFixed(2)),
         monto_total_usd: isPartial ? Number(total.toFixed(2)) : 0,
@@ -441,22 +420,23 @@ export default function OrderTypeModal({
         monto_pendiente: Number(
           Math.max(0, total - (isPartial ? advanceUSD : 0)).toFixed(2),
         ),
+        costo_delivery: Number(finalDeliveryCostUSD.toFixed(2)),
         pagos:
           isPartial && paymentMethod
             ? [
-                {
-                  metodo: paymentMethod,
-                  monto_usd:
-                    paymentMethod === "Efectivo" && advanceCurrency === "Bs"
-                      ? 0
-                      : Number(advanceUSD.toFixed(2)),
-                  monto_bs:
-                    paymentMethod === "Efectivo" && advanceCurrency === "USD"
-                      ? 0
-                      : Number(paymentAmountBs.toFixed(2)),
-                  referencia: advanceCurrency,
-                },
-              ]
+              {
+                metodo: paymentMethod,
+                monto_usd:
+                  paymentMethod === "Efectivo" && advanceCurrency === "Bs"
+                    ? 0
+                    : Number(advanceUSD.toFixed(2)),
+                monto_bs:
+                  paymentMethod === "Efectivo" && advanceCurrency === "USD"
+                    ? 0
+                    : Number(paymentAmountBs.toFixed(2)),
+                referencia: advanceCurrency,
+              },
+            ]
             : [],
         detalles: getPendingDetails(),
       },
@@ -474,87 +454,67 @@ export default function OrderTypeModal({
   const handleConfirm = async () => {
     if (isRegisteringPending) return;
 
-    const shouldRegisterPending =
-      needsPaymentInfo && ["partial", "pending"].includes(paymentStatus);
-
     setIsRegisteringPending(true);
 
-    // 1. Determinar y registrar el Delivery (siempre se registra para delivery o pickup)
-    let finalDelivery = null;
+    try {
+      // 1. Lógica para registrar Cliente si es nuevo o actualizar alias
+      let finalCustomer = selectedCustomer;
 
-    if (needsDeliveryDigits && deliveryDigits.trim() && !foundDelivery) {
-      try {
-        const { data: dataDelivery } = await axios.post(
-          `${API_BASE}/registrar-delivery`,
-          {
-            name: deliveryAlias.trim() || `Delivery-${deliveryDigits.trim()}`,
-            phone: deliveryDigits.trim(),
-          },
-        );
+      if (selectedCustomer?.isDeliveryNew && alias.trim()) {
+        try {
+          const { data } = await axios.put(
+            `${API_BASE}/clientes/${selectedCustomer.id}/alias`,
+            { name: alias.trim() },
+          );
 
-        if (dataDelivery.success && dataDelivery.delivery) {
-          finalDelivery = dataDelivery.delivery;
+          if (data.success && data.cliente) {
+            finalCustomer = {
+              ...selectedCustomer,
+              ...data.cliente,
+            };
+          }
+        } catch (error) {
+          console.error("Error guardando el alias del cliente:", error);
         }
-      } catch (error) {
-        console.error("Error registrando al nuevo delivery:", error);
-        setIsRegisteringPending(false);
-        return; // Detenemos si falla el registro
       }
-    } else {
-      finalDelivery = foundDelivery;
-    }
 
-    // 2. Lógica para registrar Cliente si es nuevo
-    let finalCustomer = selectedCustomer;
+      if (selectedCustomer?.isNew) {
+        try {
+          const { data } = await axios.post(
+            `${API_BASE}/registrar-clientes`,
+            {
+              cedula: selectedCustomer.cedula,
+              name: selectedCustomer.name,
+              phone: selectedCustomer.phone,
+            },
+          );
 
-    if (selectedCustomer?.isDeliveryNew && alias.trim()) {
-      try {
-        const { data } = await axios.put(
-          `${API_BASE}/clientes/${selectedCustomer.id}/alias`,
-          { name: alias.trim() },
-        );
-
-        if (data.success && data.cliente) {
-          finalCustomer = {
-            ...selectedCustomer,
-            ...data.cliente,
-          };
-        }
-      } catch (error) {
-        console.error("Error guardando el alias del cliente:", error);
-        setIsRegisteringPending(false);
-        return;
-      }
-    }
-
-    if (selectedCustomer?.isNew) {
-      try {
-        const { data } = await axios.post(
-          `${API_BASE}/registrar-clientes`,
-          {
-            cedula: selectedCustomer.cedula,
-            name: selectedCustomer.name,
-            phone: selectedCustomer.phone,
-          },
-        );
-
-        if (data.success) {
-          finalCustomer = data.cliente;
-          addCustomer({
-            ...data.cliente,
-            lastVisit: new Date().toISOString().split("T")[0],
+          if (data.success) {
+            finalCustomer = data.cliente;
+            addCustomer({
+              ...data.cliente,
+              lastVisit: new Date().toISOString().split("T")[0],
+            });
+          }
+        } catch (error) {
+          console.error("Error registrando al nuevo cliente:", error);
+          Swal.fire({
+            icon: "error",
+            title: "Error al registrar cliente",
+            text:
+              error.response?.data?.message ||
+              error.message ||
+              "No se pudo registrar el nuevo cliente.",
           });
+          return;
         }
-      } catch (error) {
-        console.error("Error registrando al nuevo cliente:", error);
-        setIsRegisteringPending(false);
-        return; // Detenemos si falla el registro
       }
-    }
 
-    if (shouldRegisterPending) {
-      try {
-        await registerPendingOrder(finalCustomer, finalDelivery);
+      const shouldRegisterPending =
+        needsPaymentInfo && ["partial", "pending"].includes(paymentStatus);
+
+      if (shouldRegisterPending) {
+        await registerPendingOrder(finalCustomer);
         Swal.fire({
           icon: "success",
           title: "¡Pedido Pendiente Registrado!",
@@ -570,38 +530,46 @@ export default function OrderTypeModal({
         });
         clearCart();
         onConfirm?.({ pendingRegistered: true });
-      } catch (error) {
-        console.error("Error registrando el pedido pendiente:", error);
         return;
-      } finally {
-        setIsRegisteringPending(false);
       }
-      return;
-    }
 
-    // 3. Setear el tipo de pedido en el estado global
-    const finalDeliveryId = finalDelivery
-      ? Number(finalDelivery.id ?? finalDelivery.id_delivery) || null
-      : null;
-
-    setOrderType(
-      selectedType,
-      needsPaymentInfo ? paymentStatus : null,
-      paymentStatus === "partial" ? advanceUSD : 0,
-      finalCustomer
-        ? {
+      // 2. Setear el tipo de pedido en el estado global
+      setOrderType(
+        selectedType,
+        needsPaymentInfo ? paymentStatus : null,
+        paymentStatus === "partial" ? advanceUSD : 0,
+        finalCustomer
+          ? {
             id: Number(finalCustomer.id ?? finalCustomer.id_cliente),
             name: finalCustomer.name,
             cedula: finalCustomer.cedula,
             phone: finalCustomer.phone,
           }
-        : null,
-      needsPaymentInfo ? deliveryDigits : "",
-      finalDeliveryId,
-      paymentStatus === "partial" ? advancePaymentMethod?.id : null,
-      paymentStatus === "partial" ? advanceCurrency : "USD",
-    );
-    onConfirm?.({ pendingRegistered: false });
+          : null,
+        "",
+        null,
+        paymentStatus === "partial" ? advancePaymentMethod?.id : null,
+        paymentStatus === "partial" ? advanceCurrency : "USD",
+        undefined,
+        deliveryCostUSD,
+        deliveryCostCurrency,
+        deliveryCostBs,
+        deliveryCost,
+      );
+      onConfirm?.({ pendingRegistered: false });
+    } catch (error) {
+      console.error("Error al confirmar el pedido:", error);
+      Swal.fire({
+        icon: "error",
+        title: "Error al procesar el pedido",
+        text:
+          error.response?.data?.message ||
+          error.message ||
+          "No se pudo completar el registro del pedido.",
+      });
+    } finally {
+      setIsRegisteringPending(false);
+    }
   };
 
   const clearSearch = () => {
@@ -624,11 +592,11 @@ export default function OrderTypeModal({
     ? foundCustomer
     : notFound && newName
       ? {
-          name: newName,
-          cedula: searchQuery.trim(),
-          phone: newPhone,
-          isNew: true,
-        }
+        name: newName,
+        cedula: searchQuery.trim(),
+        phone: newPhone,
+        isNew: true,
+      }
       : null;
 
   // ── Validaciones ──
@@ -642,15 +610,12 @@ export default function OrderTypeModal({
           parseFloat(advanceAmount) > 0 &&
           advanceUSD <= maxAbonoUSD + 0.001);
 
-      const isDeliveryValid =
-        !needsDeliveryDigits ||
-        (deliveryDigits.trim().length === 4 &&
-          deliveryLookupDone &&
-          (!showDeliveryAliasPrompt ||
-            wantsDeliveryAlias === false ||
-            (wantsDeliveryAlias === true && deliveryAlias.trim())));
+      const isDeliveryCostValid =
+        !needsDeliveryCost ||
+        deliveryCost.trim() === "" ||
+        (!isNaN(deliveryCostRawNum) && deliveryCostRawNum >= 0);
 
-      step1Valid = isPaymentStatusSelected && isAbonoValid && isDeliveryValid;
+      step1Valid = isPaymentStatusSelected && isAbonoValid && isDeliveryCostValid;
     } else {
       step1Valid = true;
     }
@@ -705,13 +670,12 @@ export default function OrderTypeModal({
               {["Tipo de Pedido", "Cliente"].map((label, i) => (
                 <div key={i} className="flex items-center gap-1.5 flex-1">
                   <div
-                    className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
-                      i + 1 < step
+                    className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${i + 1 < step
                         ? "bg-emerald-400 text-white"
                         : i + 1 === step
                           ? "bg-white text-slate-800"
                           : "bg-white/20 text-white/60"
-                    }`}
+                      }`}
                   >
                     {i + 1 < step ? (
                       <CheckCircle2 className="w-4 h-4" />
@@ -740,26 +704,7 @@ export default function OrderTypeModal({
             {step === 1 && (
               <div className="flex flex-col gap-5 animate-fade-in">
                 {/* Opciones de tipo de pedido */}
-                {lockType ? (
-                  <div className="flex items-center gap-3 p-3.5 bg-red-50 border-2 border-red-200 rounded-2xl animate-fade-in">
-                    <div className="w-11 h-11 rounded-xl bg-pizza-red flex items-center justify-center text-white shadow-sm shrink-0">
-                      <Bike className="w-6 h-6" />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-extrabold text-base text-slate-800">
-                          Pedido Delivery
-                        </span>
-                        <span className="bg-red-100 text-pizza-red text-[10px] font-bold px-2 py-0.5 rounded-full border border-red-200">
-                          Caja Delivery
-                        </span>
-                      </div>
-                      <p className="text-xs text-slate-500 mt-0.5">
-                        Indica los datos del repartidor y el estado del pago
-                      </p>
-                    </div>
-                  </div>
-                ) : (
+                {!lockType && (
                   <div className="grid grid-cols-2 gap-2 sm:gap-3">
                     {ORDER_TYPES.map((type) => {
                       const Icon = type.icon;
@@ -768,11 +713,10 @@ export default function OrderTypeModal({
                         <button
                           key={type.id}
                           onClick={() => handleTypeSelect(type.id)}
-                          className={`relative flex flex-col items-center justify-center gap-2 sm:gap-3 p-3 sm:p-4 md:p-5 rounded-xl sm:rounded-2xl border-2 transition-all duration-200 active:scale-[0.97] cursor-pointer ${
-                            isSelected
+                          className={`relative flex flex-col items-center justify-center gap-2 sm:gap-3 p-3 sm:p-4 md:p-5 rounded-xl sm:rounded-2xl border-2 transition-all duration-200 active:scale-[0.97] cursor-pointer ${isSelected
                               ? `${type.colorSelected} shadow-lg`
                               : `${type.colorLight} hover:shadow-md`
-                          }`}
+                            }`}
                         >
                           {isSelected && (
                             <span className="absolute top-2.5 right-2.5">
@@ -804,102 +748,89 @@ export default function OrderTypeModal({
                   </div>
                 )}
 
-                {/* Datos del Delivery o Pickup (Últimos 4 dígitos) */}
-                {needsDeliveryDigits && (
-                  <div className="flex flex-col gap-3 p-4 bg-slate-50 border-2 border-slate-200 rounded-2xl animate-fade-in">
-                    <div className="flex items-center gap-2 text-slate-700 pb-1 border-b border-slate-200 mb-1">
-                      <Phone className="w-4 h-4 text-pizza-red" />
-                      <span className="text-sm font-bold">
-                        Teléfono del Delivery (últimos 4 dígitos) *
-                      </span>
-                    </div>
-                    <div className="flex flex-col gap-2">
-                      <input
-                        type="text"
-                        pattern="[0-9]*"
-                        maxLength={4}
-                        placeholder="Últimos 4 dígitos del teléfono *"
-                        value={deliveryDigits}
-                        onChange={(e) => {
-                          setDeliveryDigits(
-                            e.target.value.replace(/\D/g, "").slice(0, 4),
-                          );
-                          setFoundDelivery(null);
-                          setDeliveryLookupDone(false);
-                          setShowDeliveryAliasPrompt(false);
-                          setWantsDeliveryAlias(null);
-                          setDeliveryAlias("");
-                        }}
-                        className="w-full px-3 py-2.5 bg-white border border-slate-300 rounded-xl text-sm focus:outline-none focus:border-pizza-red focus:ring-2 focus:ring-pizza-red/20 transition-all"
-                      />
-                      <button
-                        type="button"
-                        onClick={handleDeliverySearch}
-                        disabled={deliveryDigits.trim().length !== 4}
-                        className={`w-full py-2.5 rounded-xl font-semibold text-sm transition-colors ${
-                          deliveryDigits.trim().length === 4
-                            ? "bg-slate-800 text-white hover:bg-slate-900"
-                            : "bg-slate-200 text-slate-400 cursor-not-allowed"
-                        }`}
-                      >
-                        Buscar delivery
-                      </button>
-                    </div>
-
-                    {foundDelivery && (
-                      <div className="bg-emerald-50 border border-emerald-300 rounded-xl p-3 flex items-center gap-2">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                        <span className="text-sm font-semibold text-emerald-800">
-                          {foundDelivery.name} · {foundDelivery.phone}
-                        </span>
-                      </div>
-                    )}
-
-                    {showDeliveryAliasPrompt && !foundDelivery && (
-                      <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 flex flex-col gap-2">
-                        <span className="text-sm font-semibold text-blue-800">
-                          Delivery no registrado. ¿Desea agregarle un nombre o
-                          alias?
-                        </span>
-                        <div className="flex gap-2">
-                          <button
-                            type="button"
-                            onClick={() => setWantsDeliveryAlias(true)}
-                            className={`flex-1 py-2 rounded-lg border text-sm font-semibold ${
-                              wantsDeliveryAlias === true
-                                ? "bg-blue-500 border-blue-500 text-white"
-                                : "bg-white border-blue-200 text-blue-700"
-                            }`}
-                          >
-                            Sí
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setWantsDeliveryAlias(false);
-                              setDeliveryAlias("");
-                            }}
-                            className={`flex-1 py-2 rounded-lg border text-sm font-semibold ${
-                              wantsDeliveryAlias === false
-                                ? "bg-slate-700 border-slate-700 text-white"
-                                : "bg-white border-slate-200 text-slate-700"
-                            }`}
-                          >
-                            No
-                          </button>
+                {/* Costo del Delivery */}
+                {needsDeliveryCost && (
+                  <div className="flex flex-col gap-3.5 p-4 bg-slate-50 border-2 border-slate-200 rounded-2xl animate-fade-in shadow-xs">
+                    <div className="flex items-center justify-between pb-2.5 border-b border-slate-200">
+                      <div className="flex items-center gap-2.5 text-slate-800">
+                        <div className="w-8 h-8 rounded-xl bg-red-100 text-pizza-red flex items-center justify-center shrink-0">
+                          <Bike className="w-4 h-4" />
                         </div>
-                        {wantsDeliveryAlias === true && (
-                          <input
-                            type="text"
-                            placeholder="Nombre o alias del delivery"
-                            value={deliveryAlias}
-                            onChange={(e) => setDeliveryAlias(e.target.value)}
-                            className="w-full px-3 py-2.5 bg-white border border-blue-300 rounded-xl text-sm focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-                            autoFocus
-                          />
-                        )}
+                        <div>
+                          <span className="text-sm font-black text-slate-800 block leading-tight">
+                            Costo del Delivery *
+                          </span>
+                          <span className="text-[11px] text-slate-500">
+                            Se sumará al total a cobrar en el ticket
+                          </span>
+                        </div>
                       </div>
-                    )}
+
+                      {/* Selector de Moneda: USD o Bs */}
+                      <div className="flex gap-1 bg-white rounded-lg p-0.5 border border-blue-200">
+                        {["USD", "Bs"].map((currency) => (
+                          <button
+                            key={currency}
+                            type="button"
+                            onClick={() => setDeliveryCostCurrency(currency)}
+                            className={`px-3 py-1 rounded-md text-xs font-bold transition-colors ${deliveryCostCurrency === currency
+                                ? "bg-blue-500 text-white shadow-sm"
+                                : "text-blue-600 hover:bg-blue-100"
+                              }`}
+                          >
+                            {currency}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col gap-2">
+                      <div className="relative">
+                        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-black text-base text-slate-400 select-none">
+                          {deliveryCostCurrency === "USD" ? "$" : "Bs."}
+                        </span>
+                        <input
+                          type="number"
+                          step="any"
+                          min="0"
+                          placeholder={deliveryCostCurrency === "USD" ? "0.00" : "0.00"}
+                          value={deliveryCost}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setDeliveryCost(val);
+                          }}
+                          className="w-full pl-9 pr-4 py-2.5 bg-white border-2 border-slate-300 rounded-xl text-base font-black text-slate-800 focus:outline-none focus:border-pizza-red focus:ring-4 focus:ring-pizza-red/10 transition-all placeholder:text-slate-300 placeholder:font-medium"
+                        />
+                      </div>
+
+                      {/* Conversión y Tasa */}
+                      {deliveryCost !== "" && !isNaN(deliveryCostRawNum) && (
+                        <div className="flex items-center justify-between px-3 py-2 bg-white rounded-xl border border-slate-200 text-xs shadow-2xs">
+                          <span className="text-slate-500 font-medium">Equivalente:</span>
+                          <span className="font-bold text-slate-800">
+                            {deliveryCostCurrency === "USD" ? (
+                              <>
+                                Bs. {deliveryCostBs.toLocaleString("es-VE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                {exchangeRate > 0 && (
+                                  <span className="text-[10px] text-slate-400 ml-1 font-medium">
+                                    (Tasa: {exchangeRate.toFixed(2)})
+                                  </span>
+                                )}
+                              </>
+                            ) : (
+                              <>
+                                $ {deliveryCostUSD.toFixed(2)} USD
+                                {exchangeRate > 0 && (
+                                  <span className="text-[10px] text-slate-400 ml-1 font-medium">
+                                    (Tasa: {exchangeRate.toFixed(2)})
+                                  </span>
+                                )}
+                              </>
+                            )}
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
 
@@ -928,11 +859,10 @@ export default function OrderTypeModal({
                                 setShowAdvancePaymentEntry(false);
                               }
                             }}
-                            className={`flex items-center gap-3 p-4 rounded-xl border-2 transition-all duration-200 active:scale-[0.98] cursor-pointer ${
-                              isSelected
+                            className={`flex items-center gap-3 p-4 rounded-xl border-2 transition-all duration-200 active:scale-[0.98] cursor-pointer ${isSelected
                                 ? `${opt.selectedBg} shadow-md`
                                 : `${opt.bg} hover:opacity-90`
-                            }`}
+                              }`}
                           >
                             <Icon
                               className={`w-5 h-5 shrink-0 ${isSelected ? "text-white" : opt.color}`}
@@ -971,11 +901,10 @@ export default function OrderTypeModal({
                                   setAdvanceCurrency(currency);
                                   setAdvanceAmount("");
                                 }}
-                                className={`px-3 py-1 rounded-md text-xs font-bold transition-colors ${
-                                  advanceCurrency === currency
+                                className={`px-3 py-1 rounded-md text-xs font-bold transition-colors ${advanceCurrency === currency
                                     ? "bg-blue-500 text-white shadow-sm"
                                     : "text-blue-600 hover:bg-blue-100"
-                                }`}
+                                  }`}
                               >
                                 {currency}
                               </button>
@@ -1107,11 +1036,10 @@ export default function OrderTypeModal({
                       <button
                         type="button"
                         onClick={() => setWantsAlias(true)}
-                        className={`flex-1 py-2 rounded-xl border font-semibold text-sm transition-colors ${
-                          wantsAlias === true
+                        className={`flex-1 py-2 rounded-xl border font-semibold text-sm transition-colors ${wantsAlias === true
                             ? "bg-blue-500 border-blue-500 text-white"
                             : "bg-white border-blue-200 text-blue-700 hover:border-blue-400"
-                        }`}
+                          }`}
                       >
                         Sí
                       </button>
@@ -1121,11 +1049,10 @@ export default function OrderTypeModal({
                           setWantsAlias(false);
                           setAlias("");
                         }}
-                        className={`flex-1 py-2 rounded-xl border font-semibold text-sm transition-colors ${
-                          wantsAlias === false
+                        className={`flex-1 py-2 rounded-xl border font-semibold text-sm transition-colors ${wantsAlias === false
                             ? "bg-slate-700 border-slate-700 text-white"
                             : "bg-white border-slate-200 text-slate-700 hover:border-slate-400"
-                        }`}
+                          }`}
                       >
                         No
                       </button>
@@ -1248,11 +1175,10 @@ export default function OrderTypeModal({
               disabled={
                 step === 1 ? !step1Valid : !step2Valid || isRegisteringPending
               }
-              className={`flex-1 py-3.5 rounded-2xl font-bold text-base flex items-center justify-center gap-2 transition-all duration-200 ${
-                (step === 1 ? step1Valid : step2Valid)
+              className={`flex-1 py-3.5 rounded-2xl font-bold text-base flex items-center justify-center gap-2 transition-all duration-200 ${(step === 1 ? step1Valid : step2Valid)
                   ? "bg-slate-800 hover:bg-slate-900 text-white shadow-md hover:shadow-lg active:scale-[0.98]"
                   : "bg-slate-200 text-slate-400 cursor-not-allowed"
-              }`}
+                }`}
             >
               {isRegisteringPending
                 ? "Registrando..."

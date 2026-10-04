@@ -133,6 +133,7 @@ export const obtenerPedidosCocina = async (req, res) => {
       `SELECT DISTINCT
         v.id_venta,
         v.cantidad_caja,
+        v.costo_delivery,
         v.fecha_hora,
         v.despacho,
         c.nombre AS nombre_cliente,
@@ -174,6 +175,7 @@ export const obtenerPedidosHorno = async (req, res) => {
       `SELECT DISTINCT
         v.id_venta,
         v.cantidad_caja,
+        v.costo_delivery,
         v.fecha_hora,
         v.despacho,
         c.nombre AS nombre_cliente,
@@ -210,6 +212,7 @@ export const obtenerPedidosDespacho = async (req, res) => {
       `SELECT DISTINCT
         v.id_venta,
         v.cantidad_caja,
+        v.costo_delivery,
         v.fecha_hora,
         v.despacho,
         c.nombre AS nombre_cliente,
@@ -280,6 +283,7 @@ export const obtenerPedidosPendiente = async (req, res) => {
       `SELECT DISTINCT
         v.id_venta,
         v.cantidad_caja,
+        v.costo_delivery,
         v.fecha_hora,
         v.despacho,
         c.nombre AS nombre_cliente,

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useApp, isBoxItem } from "../../context/AppContext";
 import OrderItem from "./OrderItem";
-import { ShoppingCart, Package, Trash2, Plus, Minus } from "lucide-react";
+import { ShoppingCart, Package, Trash2, Plus, Minus, Bike } from "lucide-react";
 import { useExchangeRate } from "../../hooks/useExchangeRate";
 
 const BOX_ORDER_TYPES = new Set(["takeaway", "pickup", "PickUp", "delivery"]);
@@ -110,6 +110,26 @@ export default function OrderTicket({ onCheckout }) {
                   >
                     Añadir
                   </button>
+                </div>
+              </div>
+            )}
+
+            {/* Costo de Delivery si aplica */}
+            {currentOrder.orderType === "delivery" && (
+              <div className="flex justify-between items-center text-xs bg-red-50/70 border border-red-100 rounded-lg px-2.5 py-1.5">
+                <span className="flex items-center gap-1.5 font-bold text-slate-700">
+                  <Bike className="w-3.5 h-3.5 text-pizza-red" />
+                  Costo Delivery:
+                </span>
+                <div className="text-right">
+                  <span className="font-black text-pizza-red text-xs">
+                    ${(currentOrder.deliveryCostUSD || 0).toFixed(2)}
+                  </span>
+                  {exchangeRate > 0 && (
+                    <span className="text-[10px] text-slate-500 font-medium ml-1">
+                      (Bs. {((currentOrder.deliveryCostUSD || 0) * exchangeRate).toFixed(2)})
+                    </span>
+                  )}
                 </div>
               </div>
             )}

@@ -95,10 +95,12 @@ export default function PendingNotifications() {
       );
       const { venta, detalles, pagos } = data.data;
       const rate = Number(venta.tasa_cambio || exchangeRate || 0);
-      const originalTotal = detalles.reduce(
-        (sum, detail) => sum + Number(detail.monto_total || 0),
-        0,
-      );
+      const deliveryCost = Number(venta.costo_delivery || 0);
+      const originalTotal =
+        detalles.reduce(
+          (sum, detail) => sum + Number(detail.monto_total || 0),
+          0,
+        ) + deliveryCost;
       const paidTotal = pagos.reduce((sum, payment) => {
         const amountUsd = Number(payment.monto_usd || 0);
         return (
@@ -173,6 +175,10 @@ export default function PendingNotifications() {
           phone: venta.telefono_cliente,
         },
         deliveryId: venta.id_delivery || null,
+        deliveryCostUSD: deliveryCost,
+        deliveryCostBs: deliveryCost * (rate || 0),
+        deliveryCostCurrency: "USD",
+        deliveryCostRaw: deliveryCost > 0 ? String(deliveryCost) : "",
         pendingSaleId: venta.id_venta,
         pendingOriginalTotal: originalTotal,
         pendingRemaining: pendingRemaining,
