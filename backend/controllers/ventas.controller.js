@@ -267,12 +267,15 @@ export const registrarVentaPagadaEnEspera = async (req, res) => {
       }
     }
 
-    // Marca de espera: mientras la notificación esté en "EnEspera" la venta no
-    // aparece en cocina. Al mandarla al horno pasa a "Listo" y se libera.
+    // Marca de espera: el enum de notificaciones.estado solo admite 'Pendiente'
+    // y 'Listo', así que la espera al horno no se guarda como estado propio.
+    // Lo que la distingue es que la venta ya está 'Completado': mientras su
+    // notificación siga en 'Pendiente' la venta no aparece en cocina. Al
+    // mandarla al horno la notificación pasa a 'Listo' y se libera.
     await tx.execute({
       sql: `INSERT INTO notificaciones
        (id_venta, id_cliente, id_usuario, monto_restante, fecha_hora, estado)
-      VALUES (?, ?, ?, 0, datetime('now', '-4 hours'), 'EnEspera')`,
+      VALUES (?, ?, ?, 0, datetime('now', '-4 hours'), 'Pendiente')`,
       args: [id_venta, clienteId, finalUserId],
     });
 

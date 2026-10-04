@@ -144,10 +144,13 @@ export const obtenerPedidosCocina = async (req, res) => {
       LEFT JOIN delivery d ON d.id_delivery = v.id_delivery
       WHERE DATE(v.fecha_hora) = DATE('now', '-4 hours')
         AND (v.id_sucursal = ? OR v.id_sucursal IS NULL)
-        AND NOT EXISTS (
-          SELECT 1 FROM notificaciones n
-          WHERE n.id_venta = v.id_venta
-            AND n.estado = 'EnEspera'
+        AND NOT (
+          v.estado = 'Completado'
+          AND EXISTS (
+            SELECT 1 FROM notificaciones n
+            WHERE n.id_venta = v.id_venta
+              AND n.estado = 'Pendiente'
+          )
         )
         AND EXISTS (
           SELECT 1 FROM venta_detalle vd
