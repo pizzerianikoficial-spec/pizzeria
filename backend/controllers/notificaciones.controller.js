@@ -8,7 +8,8 @@ const consultarNotificacionesPendientesBD = async () => {
             c.nombre AS nombre_cliente, c.cedula AS cedula_cliente,
             c.telefono AS telefono_cliente,
             v.despacho, d.nombre AS nombre_delivery, d.digitos AS digitos_delivery,
-            CASE WHEN n.estado = 'EnEspera' THEN 1 ELSE 0 END AS en_espera_horno,
+            CASE WHEN n.estado = 'Pendiente' AND v.estado = 'Completado'
+                 THEN 1 ELSE 0 END AS en_espera_horno,
             COALESCE(SUM(vd.cantidad), 0) AS cantidad_items,
             GROUP_CONCAT(
               vd.cantidad || 'x ' || COALESCE(p.nombre, b.nombre, h.nombre, vd.tipo_producto),
@@ -24,7 +25,7 @@ const consultarNotificacionesPendientesBD = async () => {
      LEFT JOIN heladeria h ON h.id_heladeria = vd.id_producto_origen AND vd.tipo_producto = 'Helado'
      WHERE (
          (v.estado = 'Pendiente' AND n.estado = 'Pendiente')
-         OR (v.estado = 'Completado' AND n.estado = 'EnEspera')
+         OR (v.estado = 'Completado' AND n.estado = 'Pendiente')
        )
        AND DATE(n.fecha_hora) = DATE('now', '-4 hours')
      GROUP BY n.id_notificacion, n.id_venta, n.id_cliente,
@@ -126,7 +127,7 @@ export const mandarNotificacionAlHorno = async (req, res) => {
               v.estado AS estado_venta
        FROM notificaciones n
        INNER JOIN ventas v ON v.id_venta = n.id_venta
-       WHERE n.id_venta = ? AND n.estado = 'EnEspera'`,
+       WHERE n.id_venta = ? AND n.estado = 'Pendiente' AND v.estado = 'Completado'`,
       args: [id_venta],
     });
 
@@ -155,7 +156,13 @@ export const mandarNotificacionAlHorno = async (req, res) => {
 
     // Al pasar a "Listo" se libera el bloqueo y la venta entra a la cola de cocina
     await tx.execute({
-      sql: `UPDATE notificaciones SET estado = 'Listo' WHERE id_venta = ? AND estado = 'EnEspera'`,
+      sql: `UPDATE notificaciones SET estado = 'Listo'
+            WHERE id_venta = ? AND estado = 'Pendiente'
+              AND EXISTS (
+                SELECT 1 FROM ventas v
+                WHERE v.id_venta = notificaciones.id_venta
+                  AND v.estado = 'Completado'
+              )`,
       args: [id_venta],
     });
 

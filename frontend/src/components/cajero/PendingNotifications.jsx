@@ -58,7 +58,9 @@ export default function PendingNotifications() {
                       ...item,
                       monto_restante: payload.monto_restante,
                       estado_notificacion: payload.estado_notificacion,
-                      en_espera_horno: payload.en_espera_horno,
+                      ...(payload.en_espera_horno === undefined
+                        ? {}
+                        : { en_espera_horno: payload.en_espera_horno }),
                     }
                   : item
               )
@@ -198,8 +200,7 @@ export default function PendingNotifications() {
   };
 
   const isHoldNotification = (notification) =>
-    Number(notification.en_espera_horno) === 1 ||
-    notification.estado_notificacion === "EnEspera";
+    Number(notification.en_espera_horno) === 1;
 
   // Venta ya cobrada retenida fuera de cocina: se libera con un solo clic
   const sendToOven = async (notification) => {
