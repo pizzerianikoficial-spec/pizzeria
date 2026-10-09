@@ -468,12 +468,18 @@ export const obtenerEntregas = async (req, res) => {
         v.fecha_hora,
         v.despacho,
         v.monto_total_usd,
+        v.monto_total_bs,
+        v.tasa_cambio,
+        v.costo_delivery,
         v.estado,
         c.nombre AS nombre_cliente,
         c.telefono AS telefono_cliente,
-        c.descripcion AS direccion_cliente
+        c.descripcion AS direccion_cliente,
+        d.nombre AS repartidor_nombre,
+        d.digitos AS repartidor_telefono
       FROM ventas v
       LEFT JOIN clientes c ON c.id_cliente = v.id_cliente
+      LEFT JOIN delivery d ON d.id_delivery = v.id_delivery
       WHERE v.despacho IN ('Delivery', 'Pick Up', 'Local', 'Llevar')
         AND DATE(v.fecha_hora) = DATE('now', '-4 hours')
         AND v.estado != 'Reembolsado'
@@ -492,6 +498,7 @@ export const obtenerEntregas = async (req, res) => {
               vd.id_venta,
               vd.id_detalle,
               vd.cantidad,
+              vd.monto_total,
               vd.tipo_producto,
               vd.estado AS estado_detalle,
               CASE 
@@ -508,12 +515,39 @@ export const obtenerEntregas = async (req, res) => {
           );
     const detallesPorVenta = agruparDetallesPorVenta(detallesBatch);
 
+    const pagosBatch =
+      idsVentas.length === 0
+        ? []
+        : await queryRows(
+            `SELECT
+              vp.id_pago,
+              vp.id_venta,
+              vp.metodo_pago,
+              vp.monto_usd,
+              vp.monto_bs,
+              vp.referencia
+            FROM ventas_pagos vp
+            WHERE vp.id_venta IN (${idsVentas.map(() => "?").join(", ")})
+            ORDER BY vp.id_pago ASC`,
+            idsVentas,
+          );
+
+    const pagosPorVenta = new Map();
+    for (const pago of pagosBatch) {
+      if (!pagosPorVenta.has(pago.id_venta)) {
+        pagosPorVenta.set(pago.id_venta, []);
+      }
+      pagosPorVenta.get(pago.id_venta).push(pago);
+    }
+
     const ordenes = ventas.map((venta) => {
       const detalles = detallesPorVenta.get(venta.id_venta) || [];
+      const pagos = pagosPorVenta.get(venta.id_venta) || [];
 
       const items = detalles.map((det) => ({
         name: det.nombre_producto || det.tipo_producto,
         quantity: det.cantidad,
+        price: Number(det.monto_total || 0),
         type: det.tipo_producto,
         status: det.estado_detalle,
       }));
@@ -552,7 +586,19 @@ export const obtenerEntregas = async (req, res) => {
         address: venta.direccion_cliente || "",
         phone: venta.telefono_cliente || "",
         items: items,
-        total: venta.monto_total_usd,
+        total: Number(venta.monto_total_usd || 0),
+        totalBs: Number(venta.monto_total_bs || 0),
+        exchangeRate: Number(venta.tasa_cambio || 0),
+        deliveryCost: Number(venta.costo_delivery || 0),
+        orderState: venta.estado,
+        deliveryDriver: venta.repartidor_nombre || null,
+        deliveryDriverPhone: venta.repartidor_telefono || null,
+        payments: pagos.map((p) => ({
+          method: p.metodo_pago,
+          amountUSD: Number(p.monto_usd || 0),
+          amountBs: Number(p.monto_bs || 0),
+          reference: p.referencia,
+        })),
         orderedAt: venta.fecha_hora,
         status: estaEntregada
           ? "delivered"

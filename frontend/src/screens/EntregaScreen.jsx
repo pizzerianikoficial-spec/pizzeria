@@ -4,6 +4,7 @@ import axios from "axios";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEntregas } from "../hooks/useEntregas";
 import { useApp } from "../context/AppContext";
+import { useExchangeRate } from "../hooks/useExchangeRate";
 import {
   Bike,
   Store,
@@ -20,6 +21,10 @@ import {
   ShoppingBag,
   RefreshCw,
   CalendarDays,
+  DollarSign,
+  Wallet,
+  CreditCard,
+  Banknote,
 } from "lucide-react";
 
 function getElapsed(iso) {
@@ -30,6 +35,112 @@ function getElapsed(iso) {
   if (mins < 1) return "< 1 min";
   if (mins < 60) return `${mins} min`;
   return `${Math.floor(mins / 60)}h ${mins % 60}m`;
+}
+
+export function getPaymentSummary(order, fallbackExchangeRate = 0) {
+  const payments = order?.payments || [];
+  const rate = Number(order?.exchangeRate || fallbackExchangeRate || 0);
+  const isPending = order?.orderState === "Pendiente" && payments.length === 0;
+
+  if (isPending) {
+    const totalUSD = Number(order?.total || 0);
+    const totalBs = Number(order?.totalBs || (rate > 0 ? totalUSD * rate : 0));
+    return {
+      type: "pending",
+      badgeLabel: "Por Cobrar",
+      badgeColor: "bg-amber-100 text-amber-800 border-amber-300",
+      isPending: true,
+      items: [
+        {
+          label: "Pendiente por cobrar al entregar",
+          currency: "Pendiente",
+          amountUSD: totalUSD,
+          amountBs: totalBs,
+        },
+      ],
+    };
+  }
+
+  if (payments.length === 0) {
+    return {
+      type: "paid",
+      badgeLabel: "Pagado",
+      badgeColor: "bg-emerald-100 text-emerald-800 border-emerald-300",
+      isPending: false,
+      items: [],
+    };
+  }
+
+  const items = payments.map((p) => {
+    const m = String(p.method || "").toLowerCase();
+    const ref = String(p.reference || "").toUpperCase();
+
+    let isBCV = false;
+    let label = p.method;
+
+    if (m.includes("pago_movil") || m.includes("pago movil")) {
+      label = "Pago Móvil";
+      isBCV = true;
+    } else if (m.includes("punto") || m.includes("pos") || m.includes("tarjeta")) {
+      label = "Punto de Venta";
+      isBCV = true;
+    } else if (m.includes("transferencia")) {
+      label = "Transferencia";
+      isBCV = true;
+    } else if (m.includes("efectivo")) {
+      label = "Efectivo";
+      if (ref === "BS" || (Number(p.amountBs || 0) > 0 && !Number(p.amountUSD || 0))) {
+        isBCV = true;
+      } else {
+        isBCV = false;
+      }
+    } else if (m.includes("binance") || m.includes("zelle")) {
+      label = "Binance / Zelle";
+      isBCV = false;
+    } else if (m.includes("cashea")) {
+      label = "Cashea";
+      isBCV = false;
+    } else {
+      isBCV = Number(p.amountBs || 0) > 0 && !Number(p.amountUSD || 0);
+    }
+
+    const amountUSD = Number(p.amountUSD || 0);
+    const amountBs = Number(p.amountBs || 0);
+
+    return {
+      rawMethod: p.method,
+      label,
+      currency: isBCV ? "BCV" : "$",
+      amountUSD,
+      amountBs: amountBs > 0 ? amountBs : (rate > 0 ? amountUSD * rate : 0),
+      reference: p.reference,
+    };
+  });
+
+  const hasBCV = items.some((i) => i.currency === "BCV");
+  const hasUSD = items.some((i) => i.currency === "$");
+
+  let overallType = "USD";
+  let badgeLabel = "Pagado en $";
+  let badgeColor = "bg-emerald-100 text-emerald-800 border-emerald-300";
+
+  if (hasBCV && hasUSD) {
+    overallType = "MIXTO";
+    badgeLabel = "Mixto ($ / BCV)";
+    badgeColor = "bg-purple-100 text-purple-800 border-purple-300";
+  } else if (hasBCV) {
+    overallType = "BCV";
+    badgeLabel = "Pagado en BCV";
+    badgeColor = "bg-blue-100 text-blue-800 border-blue-300";
+  }
+
+  return {
+    type: overallType,
+    badgeLabel,
+    badgeColor,
+    isPending: false,
+    items,
+  };
 }
 
 const themes = {
@@ -71,9 +182,11 @@ const themes = {
   },
 };
 
-function OrderCard({ order, onConfirm, onViewDetails }) {
+function OrderCard({ order, onConfirm, onViewDetails, exchangeRate }) {
   const theme = themes[order.type] || themes.delivery;
   const isDelivery = order.type === "delivery";
+  const paymentSummary = getPaymentSummary(order, exchangeRate);
+  const effectiveRate = Number(order.exchangeRate || exchangeRate || 0);
 
   return (
     <div
@@ -105,6 +218,11 @@ function OrderCard({ order, onConfirm, onViewDetails }) {
             <p className="text-base font-black text-slate-800 bg-slate-50 px-2 py-1 rounded-lg border border-slate-100 whitespace-nowrap">
               ${Number(order.total || 0).toFixed(2)}
             </p>
+            {(order.totalBs > 0 || (effectiveRate > 0 && Number(order.total || 0) > 0)) && (
+              <span className="text-[10px] font-bold text-slate-400 block mt-0.5 whitespace-nowrap">
+                ≈ Bs. {Number(order.totalBs || (Number(order.total || 0) * effectiveRate)).toLocaleString("es-VE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
+            )}
           </div>
         </div>
 
@@ -141,6 +259,21 @@ function OrderCard({ order, onConfirm, onViewDetails }) {
                 title={order.address}
               >
                 {order.address}
+              </span>
+            </div>
+          )}
+
+          {/* Costo de delivery y pago */}
+          {isDelivery && (
+            <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between text-xs font-bold">
+              <span className="flex items-center gap-1 text-red-600">
+                <Bike className="w-3.5 h-3.5" />
+                Delivery: ${Number(order.deliveryCost || 0).toFixed(2)}
+              </span>
+              <span
+                className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase border ${paymentSummary.badgeColor}`}
+              >
+                {paymentSummary.badgeLabel}
               </span>
             </div>
           )}
@@ -195,9 +328,11 @@ function OrderCard({ order, onConfirm, onViewDetails }) {
   );
 }
 
-function DeliveredRow({ order, onViewDetails, deliveryTime }) {
+function DeliveredRow({ order, onViewDetails, deliveryTime, exchangeRate }) {
   const theme = themes[order.type] || themes.delivery;
   const isDelivery = order.type === "delivery";
+  const paymentSummary = getPaymentSummary(order, exchangeRate);
+  const effectiveRate = Number(order.exchangeRate || exchangeRate || 0);
 
   const formattedTime = (() => {
     try {
@@ -271,6 +406,18 @@ function DeliveredRow({ order, onViewDetails, deliveryTime }) {
             <p className="text-xl font-black text-slate-800">
               ${Number(order.total || 0).toFixed(2)}
             </p>
+            {isDelivery && Number(order.deliveryCost || 0) > 0 && (
+              <p className="text-xs font-bold text-red-600">
+                Delivery: ${Number(order.deliveryCost).toFixed(2)}
+              </p>
+            )}
+            <div className="mt-1">
+              <span
+                className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-black uppercase border ${paymentSummary.badgeColor}`}
+              >
+                {paymentSummary.badgeLabel}
+              </span>
+            </div>
             <div className="flex items-center justify-end gap-1 text-emerald-600 text-xs font-bold mt-1">
               <CheckCircle2 className="w-3.5 h-3.5" />
               <span>Entregado</span>
@@ -293,6 +440,7 @@ function DeliveredRow({ order, onViewDetails, deliveryTime }) {
 export default function EntregaScreen() {
   const queryClient = useQueryClient();
   const { currentUser } = useApp();
+  const { exchangeRate } = useExchangeRate();
   // El rol "cashierdelivery" (cajero-delivery) solo ve pedidos de Delivery
   const soloDelivery = currentUser?.role === "cashierdelivery";
   const {
@@ -652,6 +800,7 @@ export default function EntregaScreen() {
                         order={order}
                         onConfirm={handleConfirm}
                         onViewDetails={setSelectedOrder}
+                        exchangeRate={exchangeRate}
                       />
                     ))}
                   </div>
@@ -689,6 +838,7 @@ export default function EntregaScreen() {
                           order={order}
                           onConfirm={handleConfirm}
                           onViewDetails={setSelectedOrder}
+                          exchangeRate={exchangeRate}
                         />
                       ))}
                     </div>
@@ -728,6 +878,7 @@ export default function EntregaScreen() {
                         order={order}
                         onConfirm={handleConfirm}
                         onViewDetails={setSelectedOrder}
+                        exchangeRate={exchangeRate}
                       />
                     ))}
                   </div>
@@ -764,6 +915,7 @@ export default function EntregaScreen() {
                         order={order}
                         onConfirm={handleConfirm}
                         onViewDetails={setSelectedOrder}
+                        exchangeRate={exchangeRate}
                       />
                     ))}
                   </div>
@@ -907,6 +1059,7 @@ export default function EntregaScreen() {
                       {paginatedDeliveredOrders.map((order) => {
                         const theme = themes[order.type] || themes.delivery;
                         const isDelivery = order.type === "delivery";
+                        const paymentSummary = getPaymentSummary(order, exchangeRate);
                         const formattedTime = (() => {
                           try {
                             const time = deliveryTimes[order.id] || order.orderedAt;
@@ -984,8 +1137,20 @@ export default function EntregaScreen() {
                             </td>
 
                             {/* Total */}
-                            <td className="py-3.5 px-4 md:px-6 text-right whitespace-nowrap font-black text-slate-900 text-base">
-                              ${Number(order.total || 0).toFixed(2)}
+                            <td className="py-3.5 px-4 md:px-6 text-right whitespace-nowrap">
+                              <span className="font-black text-slate-900 text-base block">
+                                ${Number(order.total || 0).toFixed(2)}
+                              </span>
+                              {isDelivery && Number(order.deliveryCost || 0) > 0 && (
+                                <span className="text-[11px] font-bold text-red-600 block">
+                                  Envío: ${Number(order.deliveryCost).toFixed(2)}
+                                </span>
+                              )}
+                              <span
+                                className={`inline-block mt-0.5 px-2 py-0.5 rounded text-[10px] font-black uppercase border ${paymentSummary.badgeColor}`}
+                              >
+                                {paymentSummary.badgeLabel}
+                              </span>
                             </td>
 
                             {/* Estado */}
@@ -1021,6 +1186,7 @@ export default function EntregaScreen() {
                       order={order}
                       onViewDetails={setSelectedOrder}
                       deliveryTime={deliveryTimes[order.id]}
+                      exchangeRate={exchangeRate}
                     />
                   ))}
                 </div>
@@ -1071,6 +1237,16 @@ export default function EntregaScreen() {
       {selectedOrder &&
         (() => {
           const modalTheme = themes[selectedOrder.type] || themes.delivery;
+          const isDelivery = selectedOrder.type === "delivery";
+          const paymentSummary = getPaymentSummary(selectedOrder, exchangeRate);
+          const effectiveRate = Number(selectedOrder.exchangeRate || exchangeRate || 0);
+          const deliveryCostNum = Number(selectedOrder.deliveryCost || 0);
+          const deliveryCostBs = effectiveRate > 0 ? deliveryCostNum * effectiveRate : 0;
+          const subtotalProducts = Math.max(
+            0,
+            Number(selectedOrder.total || 0) - deliveryCostNum,
+          );
+
           return (
             <div
               className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in"
@@ -1106,8 +1282,9 @@ export default function EntregaScreen() {
                   </button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-6">
-                  <div className="mb-6 space-y-3">
+                <div className="flex-1 overflow-y-auto p-6 space-y-5">
+                  {/* Datos del Cliente */}
+                  <div className="space-y-3">
                     <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
                       <FileText className="w-4 h-4" /> Datos del Cliente
                     </h4>
@@ -1132,6 +1309,7 @@ export default function EntregaScreen() {
                     </div>
                   </div>
 
+                  {/* Productos */}
                   <div>
                     <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 mb-3">
                       <Package className="w-4 h-4" /> Productos (
@@ -1190,14 +1368,58 @@ export default function EntregaScreen() {
                   </div>
                 </div>
 
-                <div className="p-6 border-t border-slate-100 bg-slate-50/50">
-                  <div className="flex justify-between items-center">
-                    <span className="font-bold text-slate-500 uppercase tracking-wider text-sm">
-                      Total a pagar
-                    </span>
-                    <span className="text-2xl font-black text-slate-800">
-                      ${Number(selectedOrder.total || 0).toFixed(2)}
-                    </span>
+                {/* Footer con desglose */}
+                <div className="p-6 border-t border-slate-100 bg-slate-50/50 space-y-3">
+                  {isDelivery && deliveryCostNum > 0 && (
+                    <div className="space-y-1.5 pb-2.5 border-b border-slate-200/60 text-xs">
+                      <div className="flex justify-between text-slate-500">
+                        <span>Subtotal Productos:</span>
+                        <span className="font-bold text-slate-700">
+                          ${subtotalProducts.toFixed(2)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-red-600 font-bold">
+                        <span className="flex items-center gap-1">
+                          <Bike className="w-3.5 h-3.5" /> Monto Delivery:
+                        </span>
+                        <span>
+                          +${deliveryCostNum.toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex justify-between items-end">
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-bold text-slate-500 uppercase tracking-wider text-xs">
+                          {paymentSummary.isPending ? "Total a cobrar" : "Total a pagar"}
+                        </span>
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase border ${paymentSummary.badgeColor}`}
+                        >
+                          {paymentSummary.badgeLabel}
+                        </span>
+                      </div>
+                      {effectiveRate > 0 && (
+                        <span className="text-xs font-bold text-slate-400">
+                          Tasa BCV: {effectiveRate.toFixed(2)} Bs/$
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-right">
+                      <span className="text-2xl font-black text-slate-900 block leading-tight">
+                        ${Number(selectedOrder.total || 0).toFixed(2)}
+                      </span>
+                      {(selectedOrder.totalBs > 0 || (effectiveRate > 0 && Number(selectedOrder.total || 0) > 0)) && (
+                        <span className="text-xs font-black text-slate-500">
+                          ≈ Bs. {Number(
+                            selectedOrder.totalBs ||
+                            (Number(selectedOrder.total || 0) * effectiveRate)
+                          ).toLocaleString("es-VE", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
